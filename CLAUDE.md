@@ -36,18 +36,20 @@ mtg-companion/
 │   ├── web/                  # React frontend (Vite)
 │   │   ├── src/
 │   │   │   ├── components/
-│   │   │   │   ├── common/       # CardImage, Layout
+│   │   │   │   ├── common/       # CardImage, Layout, ErrorBoundary
 │   │   │   │   └── mulligan/     # DeckInput, HandDisplay, MulliganControls,
-│   │   │   │                     # BottomingInterface, DrawPhase, SimulationSection
-│   │   │   ├── stores/           # Zustand stores (deckStore, simulationStore)
-│   │   │   ├── pages/            # MulliganPage, ComingSoonPage
-│   │   │   └── lib/              # API client
+│   │   │   │                     # BottomingInterface, DrawPhase, SimulationSection, StatsPanel
+│   │   │   ├── stores/           # Zustand stores (deckStore, simulationStore, statsStore)
+│   │   │   ├── pages/            # MulliganPage, ComingSoonPage, NotFoundPage
+│   │   │   └── lib/              # API client, useDocumentTitle hook, deckId utility
 │   │   └── ...
 │   └── api/                  # Node.js backend
 │       └── src/
-│           ├── index.ts          # Express server, health check
+│           ├── app.ts            # Express app setup (exported for testing)
+│           ├── index.ts          # Server entry point (imports app, calls listen)
 │           └── routes/
-│               └── cards.ts      # POST /api/cards/resolve
+│               ├── cards.ts      # POST /api/cards/resolve
+│               └── cards.test.ts # API integration tests
 ├── packages/
 │   ├── shared-types/         # Shared TypeScript types (Card, Deck, MulliganDecision)
 │   ├── deck-parser/          # Decklist parsing logic (shared between frontend/backend)
@@ -57,6 +59,7 @@ mtg-companion/
 │   ├── ARCHITECTURE.md       # Technical architecture decisions
 │   └── HAND_READING_SPEC.md  # Hand reading tool v2 spec
 ├── CLAUDE.md                 # This file
+├── eslint.config.js          # ESLint flat config (typescript-eslint + react-hooks)
 ├── turbo.json
 ├── package.json
 └── tsconfig.base.json
@@ -188,15 +191,23 @@ pnpm test
 
 # Type check
 pnpm typecheck
+
+# Lint
+pnpm lint
+
+# Clean build outputs
+pnpm clean
 ```
 
 ### Environment Variables
 ```
-# apps/api/.env
-DATABASE_URL=postgresql://...  # Neon connection string
+# apps/api/.env (see apps/api/env.example)
+PORT=3001                      # API server port
+CORS_ORIGIN=http://localhost:5173  # Comma-separated origins
 SCRYFALL_CACHE_TTL=86400       # 24 hours in seconds
+DATABASE_URL=postgresql://...  # Neon connection string (P1)
 
-# apps/web/.env
+# apps/web/.env (see apps/web/env.example)
 VITE_API_URL=http://localhost:3001
 ```
 
@@ -205,14 +216,14 @@ VITE_API_URL=http://localhost:3001
 ### Implementation Progress
 1. ~~Set up monorepo structure (Turborepo, shared packages)~~ ✅
 2. ~~Build `deck-parser` package (parse common formats, extract card names)~~ ✅ 23 tests
-3. ~~Build `scryfall-client` package (batch resolution, caching)~~ ✅ 13 tests
-4. ~~Build API server with `/api/cards/resolve` endpoint~~ ✅
+3. ~~Build `scryfall-client` package (batch resolution, caching, 429 retry)~~ ✅ 18 tests
+4. ~~Build API server with `/api/cards/resolve` endpoint~~ ✅ 8 tests
 5. ~~Build frontend app shell (nav, routing, layout)~~ ✅
 6. ~~Build decklist input page (paste, parse, resolve, show errors)~~ ✅
 7. ~~Build mulligan simulator page (display hand, keep/mull flow, bottom cards)~~ ✅
 8. ~~Build post-keep draw simulation~~ ✅
-9. Build local decision logging + basic stats display ← **next**
-10. Deploy
+9. ~~Build local decision logging + basic stats display~~ ✅ 19 tests
+10. Deploy ← **next**
 
 ### What's NOT in Phase 1
 - User accounts / auth

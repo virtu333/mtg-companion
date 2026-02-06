@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { parseDecklist } from '@mtg-companion/deck-parser';
 import type { ParseResult, ResolvedCard } from '@mtg-companion/shared-types';
 import { resolveCards } from '../lib/api';
+import { computeDeckId } from '../lib/deckId';
 
 export type ResolveStatus = 'idle' | 'loading' | 'done' | 'error';
 
@@ -13,6 +14,7 @@ interface DeckStore {
   notFound: string[];
   resolveStatus: ResolveStatus;
   resolveError: string | null;
+  deckId: string | null;
 
   // Actions
   setRawInput: (input: string) => void;
@@ -31,6 +33,7 @@ export const useDeckStore = create<DeckStore>((set, get) => ({
   notFound: [],
   resolveStatus: 'idle',
   resolveError: null,
+  deckId: null,
 
   setRawInput: (input) => {
     set({ rawInput: input, resolveStatus: 'idle', resolveError: null });
@@ -69,6 +72,7 @@ export const useDeckStore = create<DeckStore>((set, get) => ({
           resolvedCards: response.resolved,
           notFound: response.notFound,
           resolveStatus: 'done',
+          deckId: computeDeckId(parseResult.mainboard),
         });
       }
     } catch (err) {
@@ -93,6 +97,7 @@ export const useDeckStore = create<DeckStore>((set, get) => ({
       notFound: [],
       resolveStatus: 'idle',
       resolveError: null,
+      deckId: null,
     });
   },
 }));

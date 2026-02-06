@@ -65,6 +65,7 @@
 - `notFound: string[]` — card names Scryfall couldn't find
 - `resolveStatus: 'idle' | 'loading' | 'done' | 'error'`
 - `resolveError: string | null`
+- `deckId: string | null` — deterministic djb2 hash of sorted mainboard (computed on resolve)
 - Actions: `setRawInput()`, `parse()`, `resolve()`, `clear()`
 
 **`simulationStore`** (`stores/simulationStore.ts`) — manages mulligan simulation state
@@ -77,30 +78,47 @@
 - `turnNumber: number`
 - Actions: `startNewHand(deckCards)`, `mulligan()`, `keep()`, `bottomCards(instanceIds)`, `drawCard()`, `reset()`
 
-**`statsStore`** — (not yet implemented, Chunk 5)
-- `decisions: MulliganDecision[]` — loaded from localStorage
-- `getStatsForDeck(deckId): DeckMulliganStats`
-- Actions: `recordDecision()`, `clearHistory()`
+**`statsStore`** (`stores/statsStore.ts`) — manages decision logging and stats
+- `decisions: MulliganDecision[]` — loaded from localStorage on init, persisted on every write
+- `getStatsForDeck(deckId): DeckMulliganStats` — computes stats from keep decisions only
+- Actions: `recordDecision(partial)` (generates id + timestamp), `clearHistory(deckId?)` (all or per-deck)
+- localStorage key: `"mtg-companion:decisions"`
+- Stats: totalHands = keeps, keepRate = mull0 keeps / total, avgMulligans = mean mulliganNumber of keeps
+
+### Accessibility
+- `<nav aria-label="Main navigation">` on main nav bar
+- `aria-label="Decklist input"` on textarea
+- Disabled nav items use `role="link" aria-disabled="true"`
+- `ErrorBoundary` wraps entire app (class component)
+- Each page sets `document.title` via `useDocumentTitle` hook
 
 ### Component Hierarchy (Mulligan Simulator)
 
 ```
-MulliganPage
-├── DeckInput                          # Textarea, Load/Clear buttons, error/success display
-├── SimulationSection                  # Shown after deck resolved
-│   ├── (idle) → "Draw Opening Hand" button
-│   ├── (deciding) → HandDisplay + MulliganControls
-│   │   ├── HandDisplay                # Grid of CardImage components
-│   │   │   └── CardImage (×7)         # Lazy load, error fallback, selectable
-│   │   └── MulliganControls           # Keep/Mulligan buttons + mulligan counter
-│   ├── (bottoming) → BottomingInterface
-│   │   ├── HandDisplay (selectable)   # Click cards to select for bottoming
-│   │   └── Confirm Bottom button      # Enabled when exactly N cards selected
-│   └── (playing) → DrawPhase
-│       ├── HandDisplay (opening hand)
-│       ├── Drawn cards timeline       # CardImage per turn with turn labels
-│       └── Draw / New Hand buttons
-└── StatsPanel (not yet implemented)
+ErrorBoundary
+└── BrowserRouter
+    └── Layout (nav + outlet)
+        ├── MulliganPage
+        │   ├── DeckInput                      # Textarea, Load/Clear buttons, error/success
+        │   ├── SimulationSection              # Shown after deck resolved
+        │   │   ├── (idle) → "Draw Opening Hand" button
+        │   │   ├── (deciding) → HandDisplay + MulliganControls
+        │   │   │   ├── HandDisplay            # Grid of CardImage (uses CardInstance)
+        │   │   │   │   └── CardImage (×7)     # Lazy load, error fallback, selectable
+        │   │   │   └── MulliganControls       # Keep/Mulligan buttons + counter
+        │   │   ├── (bottoming) → BottomingInterface
+        │   │   │   ├── HandDisplay (selectable by instanceId)
+        │   │   │   └── Confirm Bottom button
+        │   │   └── (playing) → DrawPhase
+        │   │       ├── HandDisplay (opening hand)
+        │   │       ├── Drawn cards timeline
+        │   │       └── Draw / New Hand buttons
+        │   └── StatsPanel                     # Per-deck stats (auto-hides when empty)
+        │       ├── Summary cards (total hands, keep rate, avg mulligans)
+        │       ├── Mulligan distribution bar chart
+        │       └── Clear History button
+        ├── ComingSoonPage
+        ├── NotFoundPage (404 catch-all)
 ```
 
 ## API Design
@@ -118,6 +136,11 @@ Request:
 }
 ```
 
+Constraints:
+- Max 300 cards per request (400 error otherwise)
+- Each card must have non-empty `name` string and `quantity >= 1`
+- 50kb request body limit
+
 Response:
 ```json
 {
@@ -133,16 +156,23 @@ Response:
       ...
     }
   ],
-  "notFound": ["Misspelled Cardname"],
-  "errors": []
+  "notFound": ["Misspelled Cardname"]
 }
 ```
 
 Implementation:
-1. Deduplicate card names
-2. Check server-side cache (Redis or in-memory Map with TTL)
-3. Batch uncached names via Scryfall `/cards/collection` (75 per request)
-4. Cache results, return all
+1. Validate input (array length, card entries, null guard)
+2. Deduplicate card names
+3. Check in-memory Map cache (24h TTL, lazy eviction of expired entries)
+4. Batch uncached names via Scryfall `/cards/collection` (75 per request, 100ms inter-batch delay)
+5. Retry on 429 with exponential backoff (up to 3 retries)
+6. Cache results, return all
+
+### API Middleware Stack
+- `helmet` — security headers
+- `morgan('dev')` — request logging
+- `cors` — multi-origin support (comma-separated `CORS_ORIGIN` env var)
+- `express.json({ limit: '50kb' })` — body parsing with size limit
 
 ### Future Endpoints (P1+)
 - `POST /api/auth/signup` / `POST /api/auth/login`

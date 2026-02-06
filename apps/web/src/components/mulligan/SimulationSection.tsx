@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import type { ResolvedCard } from '@mtg-companion/shared-types';
 import type { ParseResult } from '@mtg-companion/shared-types';
 import { useSimulationStore } from '../../stores/simulationStore';
+import { useStatsStore } from '../../stores/statsStore';
 import HandDisplay from './HandDisplay';
 import MulliganControls from './MulliganControls';
 import BottomingInterface from './BottomingInterface';
@@ -10,6 +11,7 @@ import DrawPhase from './DrawPhase';
 interface SimulationSectionProps {
   resolvedCards: ResolvedCard[];
   parseResult: ParseResult;
+  deckId: string;
 }
 
 /** Build a full deck array by expanding quantities, looking up resolved card data */
@@ -32,7 +34,7 @@ function buildDeckArray(parseResult: ParseResult, resolvedCards: ResolvedCard[])
   return deck;
 }
 
-export default function SimulationSection({ resolvedCards, parseResult }: SimulationSectionProps) {
+export default function SimulationSection({ resolvedCards, parseResult, deckId }: SimulationSectionProps) {
   const phase = useSimulationStore((s) => s.phase);
   const hand = useSimulationStore((s) => s.hand);
   const library = useSimulationStore((s) => s.library);
@@ -44,6 +46,7 @@ export default function SimulationSection({ resolvedCards, parseResult }: Simula
   const keep = useSimulationStore((s) => s.keep);
   const bottomCards = useSimulationStore((s) => s.bottomCards);
   const drawCard = useSimulationStore((s) => s.drawCard);
+  const recordDecision = useStatsStore((s) => s.recordDecision);
 
   const deckCards = useMemo(
     () => buildDeckArray(parseResult, resolvedCards),
@@ -51,6 +54,49 @@ export default function SimulationSection({ resolvedCards, parseResult }: Simula
   );
 
   const handleStart = useCallback(() => startNewHand(deckCards), [deckCards, startNewHand]);
+
+  const handleMulligan = useCallback(() => {
+    recordDecision({
+      deckId,
+      handCards: hand.map((c) => c.card.scryfallId),
+      decision: 'mulligan',
+      mulliganNumber: mulliganCount,
+      onPlay: true,
+    });
+    mulligan();
+  }, [hand, mulliganCount, deckId, mulligan, recordDecision]);
+
+  const handleKeep = useCallback(() => {
+    if (mulliganCount === 0) {
+      recordDecision({
+        deckId,
+        handCards: hand.map((c) => c.card.scryfallId),
+        decision: 'keep',
+        mulliganNumber: 0,
+        onPlay: true,
+      });
+    }
+    // If mulliganCount > 0, recording is deferred to handleBottomCards
+    keep();
+  }, [hand, mulliganCount, deckId, keep, recordDecision]);
+
+  const handleBottomCards = useCallback(
+    (instanceIds: Set<number>) => {
+      const bottomedScryfallIds = hand
+        .filter((c) => instanceIds.has(c.instanceId))
+        .map((c) => c.card.scryfallId);
+      recordDecision({
+        deckId,
+        handCards: hand.map((c) => c.card.scryfallId),
+        decision: 'keep',
+        mulliganNumber: mulliganCount,
+        bottomedCards: bottomedScryfallIds,
+        onPlay: true,
+      });
+      bottomCards(instanceIds);
+    },
+    [hand, mulliganCount, deckId, bottomCards, recordDecision],
+  );
 
   const deckSize = deckCards.length;
 
@@ -84,8 +130,8 @@ export default function SimulationSection({ resolvedCards, parseResult }: Simula
           <HandDisplay cards={hand} />
           <MulliganControls
             mulliganCount={mulliganCount}
-            onKeep={keep}
-            onMulligan={mulligan}
+            onKeep={handleKeep}
+            onMulligan={handleMulligan}
           />
         </div>
       )}
@@ -95,7 +141,7 @@ export default function SimulationSection({ resolvedCards, parseResult }: Simula
         <BottomingInterface
           hand={hand}
           cardsToBottom={mulliganCount}
-          onConfirm={bottomCards}
+          onConfirm={handleBottomCards}
         />
       )}
 
