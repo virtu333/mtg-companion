@@ -48,6 +48,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@mtg-companion/deck-parser':
+        specifier: workspace:*
+        version: link:../../packages/deck-parser
       '@mtg-companion/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
