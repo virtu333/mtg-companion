@@ -1,0 +1,2 @@
+// Shared types — will be populated in Chunk 1
+export {};
