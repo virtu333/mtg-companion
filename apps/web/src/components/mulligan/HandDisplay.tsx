@@ -11,7 +11,7 @@ export default function HandDisplay({ cards, selectedIds, onCardClick }: HandDis
   if (cards.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2">
       {cards.map((instance) => (
         <CardImage
           key={instance.instanceId}

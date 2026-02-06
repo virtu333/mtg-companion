@@ -31,7 +31,7 @@ export default function DrawPhase({
       {drawnCards.length > 0 && (
         <div>
           <h3 className="text-sm font-medium text-gray-400 mb-2">Drawn Cards</h3>
-          <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2">
             {drawnCards.map((dc) => (
               <div key={dc.card.instanceId} className="space-y-1">
                 <span className="text-xs text-gray-500 block text-center">Turn {dc.turn}</span>

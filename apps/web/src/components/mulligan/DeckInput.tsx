@@ -35,7 +35,7 @@ export default function DeckInput() {
         placeholder={PLACEHOLDER}
         value={rawInput}
         onChange={(e) => setRawInput(e.target.value)}
-        disabled={isLoading}
+        disabled={isLoading || isDone}
         spellCheck={false}
       />
 
@@ -44,11 +44,21 @@ export default function DeckInput() {
         <button
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
           onClick={resolve}
-          disabled={!hasInput || isLoading}
+          disabled={!hasInput || isLoading || isDone}
         >
-          {isLoading ? 'Resolving...' : 'Load Deck'}
+          {isLoading ? (
+            <span className="inline-flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Resolving…
+            </span>
+          ) : (
+            'Load Deck'
+          )}
         </button>
-        {hasInput && (
+        {(hasInput || isDone) && (
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-medium rounded-lg transition-colors"
             onClick={clear}

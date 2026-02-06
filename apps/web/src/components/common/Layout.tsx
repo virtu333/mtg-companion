@@ -10,8 +10,8 @@ export default function Layout() {
   return (
     <div className="min-h-screen flex flex-col">
       <nav className="border-b border-gray-700 bg-gray-800" aria-label="Main navigation">
-        <div className="max-w-6xl mx-auto px-4 flex items-center h-14 gap-6">
-          <span className="text-lg font-bold text-white tracking-tight">MTG Companion</span>
+        <div className="max-w-6xl mx-auto px-4 flex items-center h-14 gap-2 sm:gap-6">
+          <span className="text-base sm:text-lg font-bold text-white tracking-tight">MTG Companion</span>
           <div className="flex gap-1">
             {navItems.map((item) =>
               item.enabled ? (
@@ -46,6 +46,9 @@ export default function Layout() {
       <main className="flex-1">
         <Outlet />
       </main>
+      <footer className="border-t border-gray-800 py-4 text-center text-xs text-gray-600">
+        MTG Companion v0.1
+      </footer>
     </div>
   );
 }
