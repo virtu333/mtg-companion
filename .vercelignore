@@ -1,0 +1,8 @@
+.turbo
+.claude
+coverage
+*.test.ts
+*.test.tsx
+.github
+.vscode
+.idea

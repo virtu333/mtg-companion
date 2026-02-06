@@ -2,6 +2,10 @@
   "name": "mtg-companion",
   "private": true,
   "type": "module",
+  "dependencies": {
+    "@mtg-companion/scryfall-client": "workspace:*",
+    "@mtg-companion/shared-types": "workspace:*"
+  },
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
@@ -12,6 +16,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
+    "@vercel/node": "^5.5.32",
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "turbo": "^2.3.0",
