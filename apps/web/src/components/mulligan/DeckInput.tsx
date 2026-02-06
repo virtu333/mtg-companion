@@ -12,17 +12,15 @@ Sideboard
 4 Kor Firewalker`;
 
 export default function DeckInput() {
-  const {
-    rawInput,
-    setRawInput,
-    parseResult,
-    resolvedCards,
-    notFound,
-    resolveStatus,
-    resolveError,
-    resolve,
-    clear,
-  } = useDeckStore();
+  const rawInput = useDeckStore((s) => s.rawInput);
+  const setRawInput = useDeckStore((s) => s.setRawInput);
+  const parseResult = useDeckStore((s) => s.parseResult);
+  const resolvedCards = useDeckStore((s) => s.resolvedCards);
+  const notFound = useDeckStore((s) => s.notFound);
+  const resolveStatus = useDeckStore((s) => s.resolveStatus);
+  const resolveError = useDeckStore((s) => s.resolveError);
+  const resolve = useDeckStore((s) => s.resolve);
+  const clear = useDeckStore((s) => s.clear);
 
   const hasInput = rawInput.trim().length > 0;
   const isLoading = resolveStatus === 'loading';
@@ -33,6 +31,7 @@ export default function DeckInput() {
       {/* Textarea */}
       <textarea
         className="w-full h-64 bg-gray-800 border border-gray-600 rounded-lg p-4 text-sm font-mono text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-y"
+        aria-label="Decklist input"
         placeholder={PLACEHOLDER}
         value={rawInput}
         onChange={(e) => setRawInput(e.target.value)}

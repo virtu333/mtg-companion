@@ -1,8 +1,10 @@
 import DeckInput from '../components/mulligan/DeckInput';
 import SimulationSection from '../components/mulligan/SimulationSection';
 import { useDeckStore } from '../stores/deckStore';
+import { useDocumentTitle } from '../lib/useDocumentTitle';
 
 export default function MulliganPage() {
+  useDocumentTitle('Mulligan Simulator');
   const { resolveStatus, resolvedCards, parseResult } = useDeckStore();
   const isDeckReady = resolveStatus === 'done' && resolvedCards.length > 0 && parseResult;
 

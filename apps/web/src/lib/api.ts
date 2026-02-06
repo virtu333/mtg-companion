@@ -9,11 +9,13 @@ export interface ResolveResponse {
 
 export async function resolveCards(
   cards: { name: string; quantity: number }[],
+  signal?: AbortSignal,
 ): Promise<ResolveResponse> {
   const res = await fetch(`${API_URL}/api/cards/resolve`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ cards }),
+    signal: signal ?? AbortSignal.timeout(30_000),
   });
 
   if (!res.ok) {

@@ -1,14 +1,9 @@
-import type { ResolvedCard } from '@mtg-companion/shared-types';
+import type { CardInstance, DrawnCard } from '@mtg-companion/shared-types';
 import CardImage from '../common/CardImage';
 import HandDisplay from './HandDisplay';
 
-interface DrawnCard {
-  turn: number;
-  card: ResolvedCard;
-}
-
 interface DrawPhaseProps {
-  hand: ResolvedCard[];
+  hand: CardInstance[];
   drawnCards: DrawnCard[];
   librarySize: number;
   turnNumber: number;
@@ -38,9 +33,9 @@ export default function DrawPhase({
           <h3 className="text-sm font-medium text-gray-400 mb-2">Drawn Cards</h3>
           <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
             {drawnCards.map((dc) => (
-              <div key={`drawn-${dc.turn}`} className="space-y-1">
+              <div key={dc.card.instanceId} className="space-y-1">
                 <span className="text-xs text-gray-500 block text-center">Turn {dc.turn}</span>
-                <CardImage card={dc.card} />
+                <CardImage card={dc.card.card} />
               </div>
             ))}
           </div>

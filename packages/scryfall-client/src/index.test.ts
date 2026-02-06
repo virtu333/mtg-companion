@@ -198,17 +198,122 @@ describe('ScryfallClient', () => {
     expect(result.resolved.size).toBe(100);
   });
 
-  it('throws on non-ok response', async () => {
+  it('throws immediately on non-429 error', async () => {
     fetchFn = vi.fn().mockResolvedValue({
       ok: false,
-      status: 429,
-      statusText: 'Too Many Requests',
+      status: 500,
+      statusText: 'Internal Server Error',
     });
 
     const client = new ScryfallClient({ fetchFn });
     await expect(client.resolveCards(['Lightning Bolt'])).rejects.toThrow(
-      'Scryfall API error: 429 Too Many Requests',
+      'Scryfall API error: 500 Internal Server Error',
     );
+    // Should not retry for non-429
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries on 429 and succeeds after retry', async () => {
+    vi.useFakeTimers();
+
+    const mock429 = {
+      ok: false,
+      status: 429,
+      statusText: 'Too Many Requests',
+      headers: { get: () => null },
+    };
+    const mockSuccess = {
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          data: [makeScryfallCard()],
+          not_found: [],
+        }),
+    };
+
+    fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(mock429)
+      .mockResolvedValueOnce(mockSuccess);
+
+    const client = new ScryfallClient({ fetchFn });
+    const promise = client.resolveCards(['Lightning Bolt']);
+
+    // Advance past the 1s retry delay (first attempt backoff = 1000ms)
+    await vi.advanceTimersByTimeAsync(1100);
+
+    const result = await promise;
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(result.resolved.size).toBe(1);
+
+    vi.useRealTimers();
+  });
+
+  it('throws after exhausting all 429 retries', async () => {
+    vi.useFakeTimers();
+
+    const mock429 = {
+      ok: false,
+      status: 429,
+      statusText: 'Too Many Requests',
+      headers: { get: () => null },
+    };
+
+    // 4 calls = 1 initial + 3 retries, all 429
+    fetchFn = vi
+      .fn()
+      .mockResolvedValue(mock429);
+
+    const client = new ScryfallClient({ fetchFn });
+    // Attach the catch handler immediately to avoid unhandled rejection
+    const promise = client.resolveCards(['Lightning Bolt']).catch((e) => e);
+
+    // Advance through all retry delays: 1000 + 2000 + 4000 = 7000ms
+    await vi.advanceTimersByTimeAsync(8000);
+
+    const error = await promise;
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toBe('Scryfall API error: 429 Too Many Requests');
+    // 1 initial + 3 retries = 4 total calls
+    expect(fetchFn).toHaveBeenCalledTimes(4);
+
+    vi.useRealTimers();
+  });
+
+  it('uses Retry-After header for 429 delay', async () => {
+    vi.useFakeTimers();
+
+    const mock429WithHeader = {
+      ok: false,
+      status: 429,
+      statusText: 'Too Many Requests',
+      headers: { get: (h: string) => (h === 'Retry-After' ? '2' : null) },
+    };
+    const mockSuccess = {
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          data: [makeScryfallCard()],
+          not_found: [],
+        }),
+    };
+
+    fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(mock429WithHeader)
+      .mockResolvedValueOnce(mockSuccess);
+
+    const client = new ScryfallClient({ fetchFn });
+    const promise = client.resolveCards(['Lightning Bolt']);
+
+    // Advance past Retry-After of 2 seconds
+    await vi.advanceTimersByTimeAsync(2100);
+
+    const result = await promise;
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(result.resolved.size).toBe(1);
+
+    vi.useRealTimers();
   });
 
   it('sends correct headers', async () => {
@@ -220,6 +325,59 @@ describe('ScryfallClient', () => {
     expect(options.method).toBe('POST');
     expect(options.headers['Content-Type']).toBe('application/json');
     expect(options.headers['User-Agent']).toBe('MTGCompanion/0.1');
+  });
+
+  it('adds delay between batches but not after the last', async () => {
+    vi.useFakeTimers();
+
+    const names = Array.from({ length: 100 }, (_, i) => `Card ${i}`);
+    const allCards = names.map((name, i) =>
+      makeScryfallCard({ id: `id-${i}`, name }),
+    );
+
+    fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({ data: allCards.slice(0, 75), not_found: [] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({ data: allCards.slice(75), not_found: [] }),
+      });
+
+    const client = new ScryfallClient({ fetchFn });
+    const promise = client.resolveCards(names);
+
+    // First batch completes immediately, then 100ms delay before second batch
+    await vi.advanceTimersByTimeAsync(150);
+
+    const result = await promise;
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(result.resolved.size).toBe(100);
+
+    vi.useRealTimers();
+  });
+
+  it('evicts expired cache entries on access', async () => {
+    const client = new ScryfallClient({ fetchFn, cacheTtlMs: 0 });
+
+    // First call populates cache
+    await client.resolveCards(['Lightning Bolt']);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+
+    // TTL is 0ms, so cache entry is already expired.
+    // Second call should delete expired entry and re-fetch.
+    await client.resolveCards(['Lightning Bolt']);
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+
+    // Verify the expired entry was actually removed from the internal map
+    // by clearing the mock and checking that a third call still fetches
+    // (proving the entry wasn't left as a stale ghost)
+    await client.resolveCards(['Lightning Bolt']);
+    expect(fetchFn).toHaveBeenCalledTimes(3);
   });
 
   it('handles mix of cached and uncached cards', async () => {

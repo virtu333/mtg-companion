@@ -2,11 +2,13 @@
   "name": "@mtg-companion/scryfall-client",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "lint": "eslint src/",
+    "test": "vitest run"
   },
   "dependencies": {
     "@mtg-companion/shared-types": "workspace:*"

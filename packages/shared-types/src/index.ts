@@ -1,5 +1,8 @@
 // ── Card & Deck Types ──────────────────────────────────────────────
 
+/** MTG color identity */
+export type MtgColor = 'W' | 'U' | 'B' | 'R' | 'G';
+
 /** Card as resolved from Scryfall, trimmed to what we need */
 export interface ResolvedCard {
   scryfallId: string;
@@ -9,7 +12,7 @@ export interface ResolvedCard {
   oracleText: string;
   power?: string;
   toughness?: string;
-  colors: string[];
+  colors: MtgColor[];
   imageUri: string;
   backImageUri?: string;
   cmc: number;
@@ -52,6 +55,20 @@ export interface ParseError {
   line: number;
   text: string;
   reason: string;
+}
+
+// ── Simulation Instance Types ─────────────────────────────────────
+
+/** A card instance in the simulation with a unique ID to distinguish duplicates */
+export interface CardInstance {
+  instanceId: number;
+  card: ResolvedCard;
+}
+
+/** A drawn card with the turn it was drawn on */
+export interface DrawnCard {
+  turn: number;
+  card: CardInstance;
 }
 
 // ── Mulligan Simulation Types ──────────────────────────────────────

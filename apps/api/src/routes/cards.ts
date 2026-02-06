@@ -4,10 +4,12 @@ import type { ResolvedCard } from '@mtg-companion/shared-types';
 
 const router: RouterType = Router();
 
+// Validate cache TTL at startup
+const ttl = Number(process.env.SCRYFALL_CACHE_TTL ?? 86400);
+if (isNaN(ttl) || ttl < 0) throw new Error('Invalid SCRYFALL_CACHE_TTL');
+
 // Single shared client instance — keeps the in-memory cache alive
-const scryfall = new ScryfallClient({
-  cacheTtlMs: Number(process.env.SCRYFALL_CACHE_TTL ?? 86400) * 1000,
-});
+const scryfall = new ScryfallClient({ cacheTtlMs: ttl * 1000 });
 
 interface ResolveRequestCard {
   name: string;
@@ -37,8 +39,17 @@ router.post('/resolve', async (req, res) => {
       return;
     }
 
+    if (body.cards.length > 300) {
+      res.status(400).json({ error: 'Too many cards (max 300)' });
+      return;
+    }
+
     // Validate entries
     for (const entry of body.cards) {
+      if (typeof entry !== 'object' || entry === null) {
+        res.status(400).json({ error: 'Invalid card entry' });
+        return;
+      }
       if (typeof entry.name !== 'string' || !entry.name.trim()) {
         res.status(400).json({ error: 'Each card must have a non-empty "name" string' });
         return;

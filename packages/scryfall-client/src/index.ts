@@ -1,4 +1,4 @@
-import type { ResolvedCard } from '@mtg-companion/shared-types';
+import type { MtgColor, ResolvedCard } from '@mtg-companion/shared-types';
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -80,7 +80,7 @@ function mapScryfallCard(sc: ScryfallCard): ResolvedCard {
     oracleText: front?.oracle_text ?? sc.oracle_text ?? '',
     power: front?.power ?? sc.power,
     toughness: front?.toughness ?? sc.toughness,
-    colors: front?.colors ?? sc.colors ?? [],
+    colors: (front?.colors ?? sc.colors ?? []) as MtgColor[],
     imageUri,
     backImageUri,
     cmc: sc.cmc,
@@ -112,13 +112,16 @@ export class ScryfallClient {
     const toFetch: string[] = [];
     const now = Date.now();
 
-    // Check cache first
+    // Check cache first (lazy eviction of expired entries)
     for (const name of uniqueNames) {
       const key = name.toLowerCase();
       const cached = this.cache.get(key);
       if (cached && cached.expiresAt > now) {
         resolved.set(name, cached.card);
       } else {
+        if (cached) {
+          this.cache.delete(key);
+        }
         toFetch.push(name);
       }
     }
@@ -135,21 +138,21 @@ export class ScryfallClient {
 
     const allNotFound: string[] = [];
 
-    for (const batch of batches) {
+    for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+      const batch = batches[batchIdx];
       const identifiers = batch.map((name) => ({ name }));
 
-      const response = await this.fetchFn(`${this.baseUrl}/cards/collection`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'MTGCompanion/0.1',
+      const response = await this.fetchWithRetry(
+        `${this.baseUrl}/cards/collection`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'MTGCompanion/0.1',
+          },
+          body: JSON.stringify({ identifiers }),
         },
-        body: JSON.stringify({ identifiers }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Scryfall API error: ${response.status} ${response.statusText}`);
-      }
+      );
 
       const data: ScryfallCollectionResponse = await response.json();
 
@@ -167,9 +170,52 @@ export class ScryfallClient {
       for (const nf of data.not_found) {
         allNotFound.push(nf.name);
       }
+
+      // Inter-batch delay to respect rate limits (skip after last batch)
+      if (batchIdx < batches.length - 1) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
     }
 
     return { resolved, notFound: allNotFound };
+  }
+
+  /**
+   * Fetch with retry logic for 429 (Too Many Requests) responses.
+   * Retries up to 3 times with exponential backoff. Uses Retry-After
+   * header if present, otherwise falls back to 1s, 2s, 4s delays.
+   * Non-429 errors throw immediately.
+   */
+  private async fetchWithRetry(
+    url: string,
+    options: RequestInit,
+  ): Promise<Response> {
+    const MAX_RETRIES = 3;
+    const BASE_DELAY_MS = 1000;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      const response = await this.fetchFn(url, options);
+
+      if (response.ok) {
+        return response;
+      }
+
+      if (response.status !== 429 || attempt === MAX_RETRIES) {
+        throw new Error(
+          `Scryfall API error: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      // 429: wait and retry
+      const retryAfter = response.headers?.get?.('Retry-After');
+      const delayMs = retryAfter
+        ? parseFloat(retryAfter) * 1000
+        : BASE_DELAY_MS * Math.pow(2, attempt);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+
+    // Unreachable, but TypeScript needs it
+    throw new Error('Scryfall API error: max retries exceeded');
   }
 
   /** Clear the in-memory cache */

@@ -21,6 +21,9 @@ interface DeckStore {
   clear: () => void;
 }
 
+// Track the current AbortController outside the store to avoid serialization issues
+let currentAbortController: AbortController | null = null;
+
 export const useDeckStore = create<DeckStore>((set, get) => ({
   rawInput: '',
   parseResult: null,
@@ -43,6 +46,11 @@ export const useDeckStore = create<DeckStore>((set, get) => ({
     const { rawInput } = get();
     if (!rawInput.trim()) return;
 
+    // Abort any in-flight request
+    currentAbortController?.abort();
+    const controller = new AbortController();
+    currentAbortController = controller;
+
     // Parse first
     const parseResult = parseDecklist(rawInput);
     set({ parseResult, resolveStatus: 'loading', resolveError: null });
@@ -54,21 +62,30 @@ export const useDeckStore = create<DeckStore>((set, get) => ({
     }
 
     try {
-      const response = await resolveCards(allEntries);
-      set({
-        resolvedCards: response.resolved,
-        notFound: response.notFound,
-        resolveStatus: 'done',
-      });
+      const response = await resolveCards(allEntries, controller.signal);
+      // Only update if this is still the active request
+      if (currentAbortController === controller) {
+        set({
+          resolvedCards: response.resolved,
+          notFound: response.notFound,
+          resolveStatus: 'done',
+        });
+      }
     } catch (err) {
-      set({
-        resolveStatus: 'error',
-        resolveError: err instanceof Error ? err.message : 'Failed to resolve cards',
-      });
+      // Ignore aborted requests
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      if (currentAbortController === controller) {
+        set({
+          resolveStatus: 'error',
+          resolveError: err instanceof Error ? err.message : 'Failed to resolve cards',
+        });
+      }
     }
   },
 
   clear: () => {
+    currentAbortController?.abort();
+    currentAbortController = null;
     set({
       rawInput: '',
       parseResult: null,

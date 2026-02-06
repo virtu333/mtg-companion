@@ -33,19 +33,17 @@ function buildDeckArray(parseResult: ParseResult, resolvedCards: ResolvedCard[])
 }
 
 export default function SimulationSection({ resolvedCards, parseResult }: SimulationSectionProps) {
-  const {
-    phase,
-    hand,
-    library,
-    mulliganCount,
-    drawnCards,
-    turnNumber,
-    startNewHand,
-    mulligan,
-    keep,
-    bottomCards,
-    drawCard,
-  } = useSimulationStore();
+  const phase = useSimulationStore((s) => s.phase);
+  const hand = useSimulationStore((s) => s.hand);
+  const library = useSimulationStore((s) => s.library);
+  const mulliganCount = useSimulationStore((s) => s.mulliganCount);
+  const drawnCards = useSimulationStore((s) => s.drawnCards);
+  const turnNumber = useSimulationStore((s) => s.turnNumber);
+  const startNewHand = useSimulationStore((s) => s.startNewHand);
+  const mulligan = useSimulationStore((s) => s.mulligan);
+  const keep = useSimulationStore((s) => s.keep);
+  const bottomCards = useSimulationStore((s) => s.bottomCards);
+  const drawCard = useSimulationStore((s) => s.drawCard);
 
   const deckCards = useMemo(
     () => buildDeckArray(parseResult, resolvedCards),

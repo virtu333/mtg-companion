@@ -9,7 +9,7 @@ const navItems = [
 export default function Layout() {
   return (
     <div className="min-h-screen flex flex-col">
-      <nav className="border-b border-gray-700 bg-gray-800">
+      <nav className="border-b border-gray-700 bg-gray-800" aria-label="Main navigation">
         <div className="max-w-6xl mx-auto px-4 flex items-center h-14 gap-6">
           <span className="text-lg font-bold text-white tracking-tight">MTG Companion</span>
           <div className="flex gap-1">
@@ -32,6 +32,8 @@ export default function Layout() {
                 <span
                   key={item.to}
                   className="px-3 py-2 rounded text-sm font-medium text-gray-600 cursor-not-allowed"
+                  role="link"
+                  aria-disabled="true"
                   title="Coming soon"
                 >
                   {item.label}

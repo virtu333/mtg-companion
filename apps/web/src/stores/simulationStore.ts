@@ -1,18 +1,13 @@
 import { create } from 'zustand';
-import type { ResolvedCard, SimulationPhase } from '@mtg-companion/shared-types';
-
-interface DrawnCard {
-  turn: number;
-  card: ResolvedCard;
-}
+import type { CardInstance, DrawnCard, ResolvedCard, SimulationPhase } from '@mtg-companion/shared-types';
 
 interface SimulationStore {
   // State
   phase: SimulationPhase;
-  library: ResolvedCard[];
-  hand: ResolvedCard[];
+  library: CardInstance[];
+  hand: CardInstance[];
   mulliganCount: number;
-  bottomedCards: ResolvedCard[];
+  bottomedCards: CardInstance[];
   drawnCards: DrawnCard[];
   turnNumber: number;
 
@@ -20,9 +15,16 @@ interface SimulationStore {
   startNewHand: (deckCards: ResolvedCard[]) => void;
   mulligan: () => void;
   keep: () => void;
-  bottomCards: (cards: ResolvedCard[]) => void;
+  bottomCards: (instanceIds: Set<number>) => void;
   drawCard: () => void;
   reset: () => void;
+}
+
+let nextInstanceId = 0;
+
+/** Create CardInstance array from ResolvedCards, each with a unique instanceId */
+function toInstances(cards: ResolvedCard[]): CardInstance[] {
+  return cards.map((card) => ({ instanceId: nextInstanceId++, card }));
 }
 
 /** Fisher-Yates shuffle (in place, returns same array) */
@@ -44,7 +46,8 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   turnNumber: 0,
 
   startNewHand: (deckCards) => {
-    const library = shuffle([...deckCards]);
+    const instances = toInstances(deckCards);
+    const library = shuffle([...instances]);
     const hand = library.splice(0, 7);
     set({
       phase: 'deciding',
@@ -81,17 +84,17 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     }
   },
 
-  bottomCards: (cards) => {
+  bottomCards: (instanceIds) => {
     const { hand, library } = get();
-    const bottomedSet = new Set(cards);
-    const remainingHand = hand.filter((c) => !bottomedSet.has(c));
+    const remainingHand = hand.filter((c) => !instanceIds.has(c.instanceId));
+    const bottomed = hand.filter((c) => instanceIds.has(c.instanceId));
     // Put bottomed cards on bottom of library
-    const newLibrary = [...library, ...cards];
+    const newLibrary = [...library, ...bottomed];
     set({
       phase: 'playing',
       hand: remainingHand,
       library: newLibrary,
-      bottomedCards: cards,
+      bottomedCards: bottomed,
       turnNumber: 1,
     });
   },

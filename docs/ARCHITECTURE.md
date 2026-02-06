@@ -51,10 +51,9 @@
 ```
 /                    → Redirect to /mulligan
 /mulligan            → Mulligan simulator (deck input + simulation)
-/mulligan/practice   → Active simulation session
 /hand-reading        → Hand reading tool (v2, shows "coming soon")
 /profile             → User profile + stats (P1, shows "coming soon")
-/settings            → Settings (P1)
+*                    → 404 Not Found page
 ```
 
 ### Zustand Stores
@@ -69,14 +68,14 @@
 - Actions: `setRawInput()`, `parse()`, `resolve()`, `clear()`
 
 **`simulationStore`** (`stores/simulationStore.ts`) — manages mulligan simulation state
-- `library: ResolvedCard[]` — remaining cards in deck (after drawing)
-- `hand: ResolvedCard[]` — current hand
+- `library: CardInstance[]` — remaining cards in deck (each with unique `instanceId`)
+- `hand: CardInstance[]` — current hand
 - `mulliganCount: number`
 - `phase: SimulationPhase` — `'idle' | 'deciding' | 'bottoming' | 'playing'`
-- `bottomedCards: ResolvedCard[]`
-- `drawnCards: { turn: number; card: ResolvedCard }[]`
+- `bottomedCards: CardInstance[]`
+- `drawnCards: DrawnCard[]` — `{ turn: number; card: CardInstance }`
 - `turnNumber: number`
-- Actions: `startNewHand(deckCards)`, `mulligan()`, `keep()`, `bottomCards(cards)`, `drawCard()`, `reset()`
+- Actions: `startNewHand(deckCards)`, `mulligan()`, `keep()`, `bottomCards(instanceIds)`, `drawCard()`, `reset()`
 
 **`statsStore`** — (not yet implemented, Chunk 5)
 - `decisions: MulliganDecision[]` — loaded from localStorage

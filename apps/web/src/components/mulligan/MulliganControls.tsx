@@ -27,7 +27,7 @@ export default function MulliganControls({ mulliganCount, onKeep, onMulligan }: 
       )}
       {mulliganCount > 0 && (
         <span className="text-sm text-gray-400">
-          Mulligan #{mulliganCount} — drawing {handSize} card{handSize !== 1 ? 's' : ''}
+          Mulligan #{mulliganCount} — keeping {handSize} card{handSize !== 1 ? 's' : ''}
         </span>
       )}
     </div>
