@@ -59,23 +59,26 @@
 
 ### Zustand Stores
 
-**`deckStore`** — manages current deck state
+**`deckStore`** (`stores/deckStore.ts`) — manages current deck state
 - `rawInput: string` — the pasted decklist text
-- `parsedDeck: Deck | null` — parsed and resolved deck
-- `parseErrors: ParseError[]` — lines that couldn't be parsed
+- `parseResult: ParseResult | null` — parsed mainboard/sideboard/errors
+- `resolvedCards: ResolvedCard[]` — unique cards resolved from Scryfall
+- `notFound: string[]` — card names Scryfall couldn't find
 - `resolveStatus: 'idle' | 'loading' | 'done' | 'error'`
-- Actions: `parseDecklist()`, `resolveDeck()`, `clearDeck()`
+- `resolveError: string | null`
+- Actions: `setRawInput()`, `parse()`, `resolve()`, `clear()`
 
-**`simulationStore`** — manages mulligan simulation state
-- `deck: ResolvedCard[]` — shuffled deck array (source of truth)
-- `hand: ResolvedCard[]` — current 7-card hand
+**`simulationStore`** (`stores/simulationStore.ts`) — manages mulligan simulation state
+- `library: ResolvedCard[]` — remaining cards in deck (after drawing)
+- `hand: ResolvedCard[]` — current hand
 - `mulliganCount: number`
-- `phase: 'drawing' | 'deciding' | 'bottoming' | 'playing' | 'idle'`
+- `phase: SimulationPhase` — `'idle' | 'deciding' | 'bottoming' | 'playing'`
 - `bottomedCards: ResolvedCard[]`
 - `drawnCards: { turn: number; card: ResolvedCard }[]`
-- Actions: `startNewHand()`, `mulligan()`, `keep()`, `bottomCards(cards)`, `drawCard()`
+- `turnNumber: number`
+- Actions: `startNewHand(deckCards)`, `mulligan()`, `keep()`, `bottomCards(cards)`, `drawCard()`, `reset()`
 
-**`statsStore`** — manages decision history and computed stats
+**`statsStore`** — (not yet implemented, Chunk 5)
 - `decisions: MulliganDecision[]` — loaded from localStorage
 - `getStatsForDeck(deckId): DeckMulliganStats`
 - Actions: `recordDecision()`, `clearHistory()`
@@ -84,28 +87,21 @@
 
 ```
 MulliganPage
-├── DeckInputSection
-│   ├── DecklistTextarea
-│   ├── ParseErrorDisplay
-│   └── ResolveButton (+ loading state)
-├── SimulationSection (shown after deck resolved)
-│   ├── HandDisplay
-│   │   └── CardImage (×7)
-│   ├── MulliganControls
-│   │   ├── KeepButton
-│   │   ├── MulliganButton
-│   │   └── MulliganCounter
-│   ├── BottomingInterface (shown during 'bottoming' phase)
-│   │   ├── CardImage (×N, selectable)
-│   │   └── ConfirmBottomButton
-│   └── DrawPhase (shown during 'playing' phase)
-│       ├── CurrentHand
-│       ├── DrawnCardsTimeline
-│       ├── DrawButton
-│       └── NewHandButton
-└── StatsPanel (collapsible sidebar or bottom section)
-    ├── SessionStats
-    └── DeckStats
+├── DeckInput                          # Textarea, Load/Clear buttons, error/success display
+├── SimulationSection                  # Shown after deck resolved
+│   ├── (idle) → "Draw Opening Hand" button
+│   ├── (deciding) → HandDisplay + MulliganControls
+│   │   ├── HandDisplay                # Grid of CardImage components
+│   │   │   └── CardImage (×7)         # Lazy load, error fallback, selectable
+│   │   └── MulliganControls           # Keep/Mulligan buttons + mulligan counter
+│   ├── (bottoming) → BottomingInterface
+│   │   ├── HandDisplay (selectable)   # Click cards to select for bottoming
+│   │   └── Confirm Bottom button      # Enabled when exactly N cards selected
+│   └── (playing) → DrawPhase
+│       ├── HandDisplay (opening hand)
+│       ├── Drawn cards timeline       # CardImage per turn with turn labels
+│       └── Draw / New Hand buttons
+└── StatsPanel (not yet implemented)
 ```
 
 ## API Design

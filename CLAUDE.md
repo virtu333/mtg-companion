@@ -36,22 +36,18 @@ mtg-companion/
 │   ├── web/                  # React frontend (Vite)
 │   │   ├── src/
 │   │   │   ├── components/
-│   │   │   │   ├── common/       # Shared UI (CardImage, DeckInput, Layout, Nav)
-│   │   │   │   ├── mulligan/     # Mulligan simulator components
-│   │   │   │   └── hand-reading/ # Hand reading components (v2, placeholder)
-│   │   │   ├── hooks/            # Custom React hooks
-│   │   │   ├── stores/           # Zustand stores
-│   │   │   ├── pages/            # Route-level pages
-│   │   │   ├── lib/              # Utilities, API client
-│   │   │   └── types/            # Frontend-specific types
+│   │   │   │   ├── common/       # CardImage, Layout
+│   │   │   │   └── mulligan/     # DeckInput, HandDisplay, MulliganControls,
+│   │   │   │                     # BottomingInterface, DrawPhase, SimulationSection
+│   │   │   ├── stores/           # Zustand stores (deckStore, simulationStore)
+│   │   │   ├── pages/            # MulliganPage, ComingSoonPage
+│   │   │   └── lib/              # API client
 │   │   └── ...
 │   └── api/                  # Node.js backend
-│       ├── src/
-│       │   ├── routes/           # API route handlers
-│       │   ├── services/         # Business logic (scryfall, deck parsing)
-│       │   ├── db/               # Database schema, migrations, queries
-│       │   └── types/            # Backend-specific types
-│       └── ...
+│       └── src/
+│           ├── index.ts          # Express server, health check
+│           └── routes/
+│               └── cards.ts      # POST /api/cards/resolve
 ├── packages/
 │   ├── shared-types/         # Shared TypeScript types (Card, Deck, MulliganDecision)
 │   ├── deck-parser/          # Decklist parsing logic (shared between frontend/backend)
@@ -59,9 +55,7 @@ mtg-companion/
 ├── docs/
 │   ├── PRD.md                # Product requirements
 │   ├── ARCHITECTURE.md       # Technical architecture decisions
-│   └── skills/               # Claude Code skill files
-│       ├── mtg-domain.md
-│       └── scryfall-api.md
+│   └── HAND_READING_SPEC.md  # Hand reading tool v2 spec
 ├── CLAUDE.md                 # This file
 ├── turbo.json
 ├── package.json
@@ -208,16 +202,16 @@ VITE_API_URL=http://localhost:3001
 
 ## Current Phase: Phase 1 — Mulligan Simulator MVP
 
-### Implementation Order
-1. Set up monorepo structure (Turborepo, shared packages)
-2. Build `deck-parser` package (parse common formats, extract card names)
-3. Build `scryfall-client` package (batch resolution, caching)
-4. Build API server with `/api/cards/resolve` endpoint
-5. Build frontend app shell (nav, routing, layout)
-6. Build decklist input page (paste, parse, resolve, show errors)
-7. Build mulligan simulator page (display hand, keep/mull flow, bottom cards)
-8. Build post-keep draw simulation
-9. Build local decision logging + basic stats display
+### Implementation Progress
+1. ~~Set up monorepo structure (Turborepo, shared packages)~~ ✅
+2. ~~Build `deck-parser` package (parse common formats, extract card names)~~ ✅ 23 tests
+3. ~~Build `scryfall-client` package (batch resolution, caching)~~ ✅ 13 tests
+4. ~~Build API server with `/api/cards/resolve` endpoint~~ ✅
+5. ~~Build frontend app shell (nav, routing, layout)~~ ✅
+6. ~~Build decklist input page (paste, parse, resolve, show errors)~~ ✅
+7. ~~Build mulligan simulator page (display hand, keep/mull flow, bottom cards)~~ ✅
+8. ~~Build post-keep draw simulation~~ ✅
+9. Build local decision logging + basic stats display ← **next**
 10. Deploy
 
 ### What's NOT in Phase 1
