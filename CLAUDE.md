@@ -63,10 +63,12 @@ mtg-companion/
 │   ├── PRD.md                # Product requirements
 │   ├── ARCHITECTURE.md       # Technical architecture decisions
 │   └── HAND_READING_SPEC.md  # Hand reading tool v2 spec
+├── scripts/
+│   └── build-vercel.sh       # Vercel build: esbuild bundles serverless fns, then Vite builds frontend
 ├── .github/workflows/ci.yml  # GitHub Actions CI (lint, typecheck, test)
 ├── CLAUDE.md                 # This file
 ├── eslint.config.js          # ESLint flat config (typescript-eslint + react-hooks)
-├── vercel.json               # Vercel deployment config
+├── vercel.json               # Vercel deployment config (calls scripts/build-vercel.sh)
 ├── turbo.json
 ├── package.json
 └── tsconfig.base.json

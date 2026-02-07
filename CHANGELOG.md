@@ -6,7 +6,8 @@
 - **Vercel deployment** — frontend as static site, API as serverless functions (no Express overhead)
   - `api/cards/resolve.ts` — standalone serverless function replicating Express route logic
   - `api/health.ts` — health check endpoint
-  - `vercel.json` — Turborepo build, SPA fallback rewrites
+  - `vercel.json` — SPA fallback rewrites, custom build via `scripts/build-vercel.sh`
+  - Serverless functions pre-bundled with esbuild (workspace packages use TS source entry points, which Node.js can't import at runtime)
 - **GitHub Actions CI** — lint, typecheck, test on push/PR to `main`/`master`
 - **Loading spinner** — animated SVG spinner replaces "Resolving..." text during deck resolution
 - **Footer** — minimal version footer (`MTG Companion v0.1`)

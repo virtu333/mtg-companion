@@ -55,7 +55,9 @@
   - CORS handled manually (no Express middleware)
   - Faster cold starts than bundling Express + helmet + morgan
 - **Rewrites**: `/api/*` routes to serverless functions, everything else falls back to `index.html` (SPA)
-- **Build**: `pnpm turbo build` builds all packages, Vite outputs to `apps/web/dist`
+- **Build**: `bash scripts/build-vercel.sh` — esbuild bundles serverless functions (inlines workspace deps), then `pnpm turbo build --filter=@mtg-companion/web` builds the frontend
+  - Workspace packages use `"main": "./src/index.ts"` (TS source) — Node.js can't import these at runtime, so esbuild inlines all dependencies into self-contained JS
+- **Repo**: github.com/virtu333/mtg-companion
 
 ### Local Development
 - Express app (`apps/api/`) runs on `:3001` with full middleware stack (helmet, morgan, cors)
