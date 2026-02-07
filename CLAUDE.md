@@ -36,12 +36,13 @@ mtg-companion/
 │   ├── web/                  # React frontend (Vite)
 │   │   ├── src/
 │   │   │   ├── components/
-│   │   │   │   ├── common/       # CardImage, Layout, ErrorBoundary
+│   │   │   │   ├── common/       # CardImage, Layout, ErrorBoundary, MigrationBanner
 │   │   │   │   └── mulligan/     # DeckInput, HandDisplay, MulliganControls,
 │   │   │   │                     # BottomingInterface, DrawPhase, SimulationSection, StatsPanel
-│   │   │   ├── stores/           # Zustand stores (deckStore, simulationStore, statsStore)
-│   │   │   ├── pages/            # MulliganPage, ComingSoonPage, NotFoundPage
-│   │   │   └── lib/              # API client, useDocumentTitle hook, deckId utility
+│   │   │   ├── hooks/            # useAuthSync (auth state → store hydration)
+│   │   │   ├── stores/           # Zustand stores (deckStore, simulationStore, statsStore, deckLibraryStore)
+│   │   │   ├── pages/            # MulliganPage, ProfilePage, ComingSoonPage, NotFoundPage
+│   │   │   └── lib/              # API client, clerkHelpers, useDocumentTitle, deckId
 │   │   └── ...
 │   └── api/                  # Node.js backend
 │       └── src/
@@ -56,7 +57,18 @@ mtg-companion/
 │   └── scryfall-client/      # Scryfall API client with caching
 ├── api/                      # Vercel serverless functions (production API)
 │   ├── cards/
-│   │   └── resolve.ts        # POST /api/cards/resolve (standalone, no Express)
+│   │   └── resolve.ts        # POST /api/cards/resolve (public, no auth)
+│   ├── decks/
+│   │   ├── index.ts          # GET/POST /api/decks (auth required)
+│   │   └── [id].ts           # PATCH/DELETE /api/decks/:id (auth required)
+│   ├── decisions/
+│   │   ├── index.ts          # GET/POST /api/decisions (auth required)
+│   │   └── clear.ts          # DELETE /api/decisions/clear (auth required)
+│   ├── lib/
+│   │   ├── auth.ts           # verifyAuth() — Clerk JWT verification
+│   │   ├── db.ts             # Neon Postgres query helpers
+│   │   └── schema.sql        # Database DDL
+│   ├── migrate.ts            # POST /api/migrate (auth required, idempotent)
 │   ├── health.ts             # GET /api/health
 │   └── tsconfig.json
 ├── docs/
@@ -216,33 +228,47 @@ pnpm clean
 PORT=3001                      # API server port
 CORS_ORIGIN=http://localhost:5173  # Comma-separated origins
 SCRYFALL_CACHE_TTL=86400       # 24 hours in seconds
-DATABASE_URL=postgresql://...  # Neon connection string (P1)
+DATABASE_URL=postgresql://...  # Neon connection string
+CLERK_SECRET_KEY=sk_test_...   # Clerk secret key for JWT verification
 
 # apps/web/.env (see apps/web/env.example)
 VITE_API_URL=http://localhost:3001
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...  # Clerk publishable key (optional — app works without it)
 ```
 
-## Current Phase: Phase 1 — Mulligan Simulator MVP
+## Current Phase: Phase 2 — Auth + Server Persistence
 
-### Implementation Progress
+### Phase 1 (Complete)
 1. ~~Set up monorepo structure (Turborepo, shared packages)~~ ✅
-2. ~~Build `deck-parser` package (parse common formats, extract card names)~~ ✅ 24 tests
-3. ~~Build `scryfall-client` package (batch resolution, caching, 429 retry, fuzzy fallback)~~ ✅ 20 tests
+2. ~~Build `deck-parser` package~~ ✅ 24 tests
+3. ~~Build `scryfall-client` package~~ ✅ 20 tests
 4. ~~Build API server with `/api/cards/resolve` endpoint~~ ✅ 8 tests
-5. ~~Build frontend app shell (nav, routing, layout)~~ ✅
-6. ~~Build decklist input page (paste, parse, resolve, show errors)~~ ✅
-7. ~~Build mulligan simulator page (display hand, keep/mull flow, bottom cards)~~ ✅
-8. ~~Build post-keep draw simulation~~ ✅
-9. ~~Build local decision logging + basic stats display~~ ✅ 19 tests
-10. ~~Deploy (Vercel serverless + CI)~~ ✅
+5. ~~Build frontend (app shell, deck input, mulligan sim, draw phase, stats)~~ ✅ 36 web tests
+6. ~~Deploy (Vercel serverless + CI)~~ ✅
+7. ~~Post-deploy fixes (images, DFC, Arena names)~~ ✅
+8. ~~Play/draw toggle + saved decklists~~ ✅
 
-### What's NOT in Phase 1
-- User accounts / auth
-- Server-side decision storage
+### Phase 2 — Auth + Database
+1. ~~Clerk frontend (ClerkProvider, SignIn/UserButton, ProfilePage)~~ ✅
+2. ~~Database schema + query helpers (Neon Postgres, api/lib/db.ts)~~ ✅
+3. ~~Auth middleware (api/lib/auth.ts, JWT verification, CORS)~~ ✅
+4. ~~Deck CRUD endpoints (api/decks/)~~ ✅
+5. ~~Decision endpoints + migration (api/decisions/, api/migrate.ts)~~ ✅
+6. ~~Store refactoring for dual-mode (localStorage + server sync)~~ ✅
+7. ~~Migration banner UI~~ ✅
+8. Profile page + polish ← current
+
+### Auth Architecture
+- **Frontend**: `ClerkProvider` → `ClerkAuthBridge` → `useAuthContext()` context
+- **Auth sync**: `AuthSync` component watches sign-in/out, hydrates stores from server
+- **Stores**: Dual-mode — writes to localStorage always, syncs to server when token available
+- **Serverless fns**: `api/lib/auth.ts` verifies Clerk JWTs, lazy-creates user rows
+- **DB**: Neon Postgres — `users`, `saved_decks`, `mulligan_decisions` tables
+- **Migration**: `MigrationBanner` prompts to migrate localStorage → server on first sign-in
+
+### What's NOT in Phase 2
 - Hand reading tool (nav link exists but disabled)
-- Play/draw toggle
 - Decision notes
-- Saved decklists (user must re-paste)
 - Card-level analytics
 
 ## Conventions

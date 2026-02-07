@@ -1,18 +1,24 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useAuthContext, SignInButton, UserButton } from '../../lib/clerkHelpers';
+import MigrationBanner from './MigrationBanner';
 
-const navItems = [
-  { to: '/mulligan', label: 'Mulligan Simulator', enabled: true },
-  { to: '/hand-reading', label: 'Hand Reading', enabled: false },
-  { to: '/profile', label: 'Profile', enabled: false },
-];
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
 
 export default function Layout() {
+  const { isSignedIn, isLoaded } = useAuthContext();
+
+  const navItems = [
+    { to: '/mulligan', label: 'Mulligan Simulator', enabled: true },
+    { to: '/hand-reading', label: 'Hand Reading', enabled: false },
+    { to: '/profile', label: 'Profile', enabled: isSignedIn },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col">
       <nav className="border-b border-gray-700 bg-gray-800" aria-label="Main navigation">
         <div className="max-w-6xl mx-auto px-4 flex items-center h-14 gap-2 sm:gap-6">
           <span className="text-base sm:text-lg font-bold text-white tracking-tight">MTG Companion</span>
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-1">
             {navItems.map((item) =>
               item.enabled ? (
                 <NavLink
@@ -41,13 +47,28 @@ export default function Layout() {
               ),
             )}
           </div>
+          {/* Auth UI — only show when Clerk is configured */}
+          {clerkPubKey && isLoaded && (
+            <div className="flex items-center">
+              {isSignedIn ? (
+                <UserButton />
+              ) : (
+                <SignInButton mode="modal">
+                  <button className="px-3 py-1.5 rounded text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700/50 transition-colors">
+                    Sign In
+                  </button>
+                </SignInButton>
+              )}
+            </div>
+          )}
         </div>
       </nav>
+      <MigrationBanner />
       <main className="flex-1">
         <Outlet />
       </main>
       <footer className="border-t border-gray-800 py-4 text-center text-xs text-gray-600">
-        MTG Companion v0.1
+        MTG Companion v0.2
       </footer>
     </div>
   );

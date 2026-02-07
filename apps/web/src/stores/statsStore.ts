@@ -1,7 +1,10 @@
 import { create } from 'zustand';
 import type { MulliganDecision, DeckMulliganStats } from '@mtg-companion/shared-types';
+import { saveDecisionsToServer, clearDecisionsOnServer } from '../lib/api';
 
 const STORAGE_KEY = 'mtg-companion:decisions';
+
+type GetTokenFn = () => Promise<string | null>;
 
 function loadDecisions(): MulliganDecision[] {
   try {
@@ -18,15 +21,31 @@ function persistDecisions(decisions: MulliganDecision[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(decisions));
 }
 
+/** Fire-and-forget server sync */
+async function syncToServer(getToken: GetTokenFn | null, action: (token: string) => Promise<void>) {
+  if (!getToken) return;
+  try {
+    const token = await getToken();
+    if (token) await action(token);
+  } catch (err) {
+    console.error('Server sync failed:', err);
+  }
+}
+
 interface StatsStore {
   decisions: MulliganDecision[];
+  _getToken: GetTokenFn | null;
   recordDecision: (decision: Omit<MulliganDecision, 'id' | 'timestamp'>) => void;
   clearHistory: (deckId?: string) => void;
   getStatsForDeck: (deckId: string) => DeckMulliganStats;
+  setDecisions: (decisions: MulliganDecision[]) => void;
+  setGetToken: (fn: GetTokenFn | null) => void;
+  reloadFromLocalStorage: () => void;
 }
 
 export const useStatsStore = create<StatsStore>((set, get) => ({
   decisions: loadDecisions(),
+  _getToken: null,
 
   recordDecision: (partial) => {
     const decision: MulliganDecision = {
@@ -37,6 +56,7 @@ export const useStatsStore = create<StatsStore>((set, get) => ({
     const updated = [...get().decisions, decision];
     set({ decisions: updated });
     persistDecisions(updated);
+    syncToServer(get()._getToken, (token) => saveDecisionsToServer([decision], token));
   },
 
   clearHistory: (deckId?) => {
@@ -45,6 +65,7 @@ export const useStatsStore = create<StatsStore>((set, get) => ({
       : [];
     set({ decisions: updated });
     persistDecisions(updated);
+    syncToServer(get()._getToken, (token) => clearDecisionsOnServer(token, deckId));
   },
 
   getStatsForDeck: (deckId) => {
@@ -75,5 +96,18 @@ export const useStatsStore = create<StatsStore>((set, get) => ({
     }
 
     return { deckId, totalHands, keepRate, averageMulligans, mulliganDistribution };
+  },
+
+  setDecisions: (decisions) => {
+    set({ decisions });
+    persistDecisions(decisions);
+  },
+
+  setGetToken: (fn) => {
+    set({ _getToken: fn });
+  },
+
+  reloadFromLocalStorage: () => {
+    set({ decisions: loadDecisions() });
   },
 }));

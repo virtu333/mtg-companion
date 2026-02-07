@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { ScryfallClient } from '@mtg-companion/scryfall-client';
 import type { ResolvedCard } from '@mtg-companion/shared-types';
+import { setCorsHeaders } from '../lib/auth';
 
 const scryfall = new ScryfallClient({ cacheTtlMs: 86400 * 1000 });
 
@@ -10,10 +11,7 @@ interface ResolveRequestCard {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCorsHeaders(res);
 
   if (req.method === 'OPTIONS') {
     res.status(204).end();
@@ -65,7 +63,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const aliases: Record<string, string> = {};
     for (const [inputName, card] of result.resolved.entries()) {
       resolved.push(card);
-      // Track name mappings for fuzzy-resolved cards (e.g. Arena name → paper name)
       if (inputName.toLowerCase() !== card.name.toLowerCase()) {
         aliases[inputName] = card.name;
       }
