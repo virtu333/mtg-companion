@@ -126,12 +126,39 @@ describe('ScryfallClient', () => {
   });
 
   it('returns not-found cards', async () => {
-    fetchFn = mockFetchSuccess([], ['Misspelled Card']);
+    // Collection endpoint returns not-found, fuzzy fallback returns 404
+    fetchFn = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ data: [], not_found: [{ name: 'Misspelled Card' }] }),
+      })
+      .mockResolvedValueOnce({ ok: false, status: 404, statusText: 'Not Found' });
     const client = new ScryfallClient({ fetchFn });
     const result = await client.resolveCards(['Misspelled Card']);
 
     expect(result.resolved.size).toBe(0);
     expect(result.notFound).toEqual(['Misspelled Card']);
+  });
+
+  it('resolves not-found cards via fuzzy fallback (Arena name variants)', async () => {
+    const spiderSense = makeScryfallCard({ id: 'spider-123', name: 'Spider-Sense' });
+    // Collection endpoint returns not-found, fuzzy fallback finds the card
+    fetchFn = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ data: [], not_found: [{ name: 'Detect Intrusion' }] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(spiderSense),
+      });
+    const client = new ScryfallClient({ fetchFn });
+    const result = await client.resolveCards(['Detect Intrusion']);
+
+    expect(result.resolved.size).toBe(1);
+    // Keyed by the original input name so downstream lookup works
+    expect(result.resolved.get('Detect Intrusion')?.name).toBe('Spider-Sense');
+    expect(result.notFound).toEqual([]);
   });
 
   it('caches results and skips fetch on second call', async () => {

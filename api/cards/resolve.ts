@@ -62,11 +62,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const result = await scryfall.resolveCards(uniqueNames);
 
     const resolved: ResolvedCard[] = [];
-    for (const card of result.resolved.values()) {
+    const aliases: Record<string, string> = {};
+    for (const [inputName, card] of result.resolved.entries()) {
       resolved.push(card);
+      // Track name mappings for fuzzy-resolved cards (e.g. Arena name → paper name)
+      if (inputName.toLowerCase() !== card.name.toLowerCase()) {
+        aliases[inputName] = card.name;
+      }
     }
 
-    res.json({ resolved, notFound: result.notFound });
+    res.json({ resolved, notFound: result.notFound, aliases });
   } catch (err) {
     console.error('Error resolving cards:', err);
     res.status(502).json({ error: 'Failed to resolve cards from Scryfall' });

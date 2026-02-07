@@ -5,6 +5,8 @@ const API_URL = import.meta.env.VITE_API_URL ?? '';
 export interface ResolveResponse {
   resolved: ResolvedCard[];
   notFound: string[];
+  /** Maps input names to resolved Scryfall names when they differ (e.g. Arena name variants) */
+  aliases?: Record<string, string>;
 }
 
 export async function resolveCards(

@@ -9,6 +9,7 @@ export default function MulliganPage() {
   const resolveStatus = useDeckStore((s) => s.resolveStatus);
   const resolvedCards = useDeckStore((s) => s.resolvedCards);
   const parseResult = useDeckStore((s) => s.parseResult);
+  const aliases = useDeckStore((s) => s.aliases);
   const deckId = useDeckStore((s) => s.deckId);
   const isDeckReady = resolveStatus === 'done' && resolvedCards.length > 0 && parseResult && deckId;
 
@@ -21,7 +22,7 @@ export default function MulliganPage() {
       <DeckInput />
       {isDeckReady && (
         <>
-          <SimulationSection resolvedCards={resolvedCards} parseResult={parseResult} deckId={deckId} />
+          <SimulationSection resolvedCards={resolvedCards} parseResult={parseResult} deckId={deckId} aliases={aliases} />
           <StatsPanel deckId={deckId} />
         </>
       )}

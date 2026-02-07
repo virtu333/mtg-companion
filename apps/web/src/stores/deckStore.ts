@@ -12,6 +12,8 @@ interface DeckStore {
   parseResult: ParseResult | null;
   resolvedCards: ResolvedCard[];
   notFound: string[];
+  /** Maps input names to resolved Scryfall names when they differ */
+  aliases: Record<string, string>;
   resolveStatus: ResolveStatus;
   resolveError: string | null;
   deckId: string | null;
@@ -31,6 +33,7 @@ export const useDeckStore = create<DeckStore>((set, get) => ({
   parseResult: null,
   resolvedCards: [],
   notFound: [],
+  aliases: {},
   resolveStatus: 'idle',
   resolveError: null,
   deckId: null,
@@ -71,6 +74,7 @@ export const useDeckStore = create<DeckStore>((set, get) => ({
         set({
           resolvedCards: response.resolved,
           notFound: response.notFound,
+          aliases: response.aliases ?? {},
           resolveStatus: 'done',
           deckId: computeDeckId(parseResult.mainboard),
         });
@@ -95,6 +99,7 @@ export const useDeckStore = create<DeckStore>((set, get) => ({
       parseResult: null,
       resolvedCards: [],
       notFound: [],
+      aliases: {},
       resolveStatus: 'idle',
       resolveError: null,
       deckId: null,

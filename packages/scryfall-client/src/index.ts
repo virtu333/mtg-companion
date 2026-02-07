@@ -166,9 +166,19 @@ export class ScryfallClient {
         });
       }
 
-      // Track not-found
+      // Try fuzzy lookup for not-found cards (handles Arena name variants)
       for (const nf of data.not_found) {
-        allNotFound.push(nf.name);
+        const fuzzyCard = await this.fuzzyLookup(nf.name);
+        if (fuzzyCard) {
+          const card = mapScryfallCard(fuzzyCard);
+          resolved.set(nf.name, card);
+          this.cache.set(nf.name.toLowerCase(), {
+            card,
+            expiresAt: now + this.cacheTtlMs,
+          });
+        } else {
+          allNotFound.push(nf.name);
+        }
       }
 
       // Inter-batch delay to respect rate limits (skip after last batch)
@@ -216,6 +226,26 @@ export class ScryfallClient {
 
     // Unreachable, but TypeScript needs it
     throw new Error('Scryfall API error: max retries exceeded');
+  }
+
+  /**
+   * Fuzzy lookup for a single card name. Used as fallback when the batch
+   * endpoint can't find a card (e.g. Arena names differ from paper names).
+   * Returns null if no match found.
+   */
+  private async fuzzyLookup(name: string): Promise<ScryfallCard | null> {
+    try {
+      const response = await this.fetchWithRetry(
+        `${this.baseUrl}/cards/named?fuzzy=${encodeURIComponent(name)}`,
+        {
+          method: 'GET',
+          headers: { 'User-Agent': 'MTGCompanion/0.1' },
+        },
+      );
+      return await response.json();
+    } catch {
+      return null;
+    }
   }
 
   /** Clear the in-memory cache */

@@ -12,10 +12,15 @@ interface SimulationSectionProps {
   resolvedCards: ResolvedCard[];
   parseResult: ParseResult;
   deckId: string;
+  aliases: Record<string, string>;
 }
 
 /** Build a full deck array by expanding quantities, looking up resolved card data */
-function buildDeckArray(parseResult: ParseResult, resolvedCards: ResolvedCard[]): ResolvedCard[] {
+function buildDeckArray(
+  parseResult: ParseResult,
+  resolvedCards: ResolvedCard[],
+  aliases: Record<string, string>,
+): ResolvedCard[] {
   const cardMap = new Map<string, ResolvedCard>();
   for (const card of resolvedCards) {
     cardMap.set(card.name.toLowerCase(), card);
@@ -24,7 +29,12 @@ function buildDeckArray(parseResult: ParseResult, resolvedCards: ResolvedCard[])
   const deck: ResolvedCard[] = [];
   // Only use mainboard for simulation
   for (const entry of parseResult.mainboard) {
-    const card = cardMap.get(entry.name.toLowerCase());
+    // Try direct name match, then check aliases (e.g. Arena name → Scryfall name)
+    let card = cardMap.get(entry.name.toLowerCase());
+    if (!card) {
+      const aliasedName = aliases[entry.name];
+      if (aliasedName) card = cardMap.get(aliasedName.toLowerCase());
+    }
     if (card) {
       for (let i = 0; i < entry.quantity; i++) {
         deck.push(card);
@@ -34,7 +44,7 @@ function buildDeckArray(parseResult: ParseResult, resolvedCards: ResolvedCard[])
   return deck;
 }
 
-export default function SimulationSection({ resolvedCards, parseResult, deckId }: SimulationSectionProps) {
+export default function SimulationSection({ resolvedCards, parseResult, deckId, aliases }: SimulationSectionProps) {
   const phase = useSimulationStore((s) => s.phase);
   const hand = useSimulationStore((s) => s.hand);
   const library = useSimulationStore((s) => s.library);
@@ -49,8 +59,8 @@ export default function SimulationSection({ resolvedCards, parseResult, deckId }
   const recordDecision = useStatsStore((s) => s.recordDecision);
 
   const deckCards = useMemo(
-    () => buildDeckArray(parseResult, resolvedCards),
-    [parseResult, resolvedCards],
+    () => buildDeckArray(parseResult, resolvedCards, aliases),
+    [parseResult, resolvedCards, aliases],
   );
 
   const handleStart = useCallback(() => startNewHand(deckCards), [deckCards, startNewHand]);
