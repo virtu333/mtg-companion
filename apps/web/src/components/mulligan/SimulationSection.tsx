@@ -24,6 +24,11 @@ function buildDeckArray(
   const cardMap = new Map<string, ResolvedCard>();
   for (const card of resolvedCards) {
     cardMap.set(card.name.toLowerCase(), card);
+    // Also index by front face name for DFCs (e.g. "Bloodsoaked Insight" for "Bloodsoaked Insight // Sanguine Morass")
+    if (card.name.includes(' // ')) {
+      const frontFace = card.name.split(' // ')[0];
+      cardMap.set(frontFace.toLowerCase(), card);
+    }
   }
 
   const deck: ResolvedCard[] = [];
