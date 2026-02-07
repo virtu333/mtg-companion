@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.7.0 — Auth + Database (Phase 3)
+
+### Added
+- **User authentication** — Clerk with Google OAuth. Sign In button in nav, UserButton when signed in. App works fully anonymous when Clerk key is absent
+- **Server-side persistence** — Neon serverless Postgres stores decks and mulligan decisions per user
+- **Profile page** — shows user ID, saved deck count, total hands, and keeps
+- **Migration banner** — prompts signed-in users with existing localStorage data to migrate to server. Idempotent (safe to run twice)
+- **Auth context** — `ClerkAuthBridge` + `useAuthContext()` provides unified auth interface that works with or without Clerk
+- **Auth sync** — `AuthSync` component watches sign-in/out, hydrates stores from server on login, reverts to localStorage on logout
+- **5 new serverless functions**: `api/decks/index.ts` (GET/POST), `api/decks/[id].ts` (PATCH/DELETE), `api/decisions/index.ts` (GET/POST), `api/decisions/clear.ts` (DELETE), `api/migrate.ts` (POST)
+- **Auth middleware** — `api/lib/auth.ts` verifies Clerk JWTs via standalone `verifyToken`, lazy-creates user rows
+- **DB query helpers** — `api/lib/db.ts` with typed functions for all CRUD operations
+- **Database schema** — `api/lib/schema.sql` (users, saved_decks, mulligan_decisions tables)
+
+### Changed
+- **deckLibraryStore** — dual-mode: writes to localStorage always, fire-and-forget sync to server when authenticated
+- **statsStore** — same dual-mode pattern for mulligan decisions
+- **api.ts** — 8 new auth-aware API functions (fetchDecks, saveDeckToServer, etc.)
+- **CORS headers** — all serverless functions now allow `Authorization` header; extracted into shared `setCorsHeaders()` helper
+- **Nav bar** — Profile link enabled when signed in; Sign In / UserButton on right side
+- **Build script** — bundles 7 serverless functions (was 2)
+
+### Fixed
+- **@clerk/backend verifyToken** — use standalone export with explicit `secretKey` option (not a method on `createClerkClient()` in v2)
+
 ## 0.6.0 — Play/Draw Toggle + Saved Decklists (Phase 2)
 
 ### Added
