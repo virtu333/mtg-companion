@@ -1,4 +1,4 @@
-import { useShallow } from 'zustand/react/shallow';
+import { useMemo } from 'react';
 import { useStatsStore } from '../../stores/statsStore';
 
 interface StatsPanelProps {
@@ -6,10 +6,36 @@ interface StatsPanelProps {
 }
 
 export default function StatsPanel({ deckId }: StatsPanelProps) {
-  // useShallow prevents infinite re-renders: getStatsForDeck returns a new object
-  // every call, and Zustand's default reference equality would trigger re-render loops
-  const stats = useStatsStore(useShallow((s) => s.getStatsForDeck(deckId)));
+  // Subscribe to the raw decisions array (stable reference) and compute stats
+  // in useMemo. Using getStatsForDeck as a Zustand selector causes infinite
+  // re-renders because it returns a new object (with nested mulliganDistribution)
+  // on every call, which even useShallow can't stabilize.
+  const decisions = useStatsStore((s) => s.decisions);
   const clearHistory = useStatsStore((s) => s.clearHistory);
+
+  const stats = useMemo(() => {
+    const keeps = decisions.filter(
+      (d) => d.deckId === deckId && d.decision === 'keep',
+    );
+
+    if (keeps.length === 0) {
+      return { totalHands: 0, keepRate: 0, averageMulligans: 0, mulliganDistribution: {} as Record<number, number> };
+    }
+
+    const totalHands = keeps.length;
+    const keptFirst = keeps.filter((d) => d.mulliganNumber === 0).length;
+    const keepRate = keptFirst / totalHands;
+    const totalMulls = keeps.reduce((sum, d) => sum + d.mulliganNumber, 0);
+    const averageMulligans = totalMulls / totalHands;
+
+    const mulliganDistribution: Record<number, number> = {};
+    for (const k of keeps) {
+      mulliganDistribution[k.mulliganNumber] =
+        (mulliganDistribution[k.mulliganNumber] ?? 0) + 1;
+    }
+
+    return { totalHands, keepRate, averageMulligans, mulliganDistribution };
+  }, [decisions, deckId]);
 
   if (stats.totalHands === 0) return null;
 
