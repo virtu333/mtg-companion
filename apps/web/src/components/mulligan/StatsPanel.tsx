@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import { useStatsStore } from '../../stores/statsStore';
 
 interface StatsPanelProps {
@@ -5,8 +6,9 @@ interface StatsPanelProps {
 }
 
 export default function StatsPanel({ deckId }: StatsPanelProps) {
-  // Subscribe to decisions so we re-render when they change
-  const stats = useStatsStore((s) => s.getStatsForDeck(deckId));
+  // useShallow prevents infinite re-renders: getStatsForDeck returns a new object
+  // every call, and Zustand's default reference equality would trigger re-render loops
+  const stats = useStatsStore(useShallow((s) => s.getStatsForDeck(deckId)));
   const clearHistory = useStatsStore((s) => s.clearHistory);
 
   if (stats.totalHands === 0) return null;
