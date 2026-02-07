@@ -45,6 +45,28 @@
 └────────────────────────────────────────────────────┘
 ```
 
+## Deployment Architecture
+
+### Vercel (Production)
+- **Frontend**: Static site built by Vite, served from `apps/web/dist`
+- **API**: Standalone serverless functions in `api/` directory (not the Express app)
+  - `api/cards/resolve.ts` — replicates Express route validation, uses `@mtg-companion/scryfall-client` directly
+  - `api/health.ts` — simple health check
+  - CORS handled manually (no Express middleware)
+  - Faster cold starts than bundling Express + helmet + morgan
+- **Rewrites**: `/api/*` routes to serverless functions, everything else falls back to `index.html` (SPA)
+- **Build**: `pnpm turbo build` builds all packages, Vite outputs to `apps/web/dist`
+
+### Local Development
+- Express app (`apps/api/`) runs on `:3001` with full middleware stack (helmet, morgan, cors)
+- Vite dev server runs on `:5173`, proxies API calls via `VITE_API_URL=http://localhost:3001`
+- Both started via `pnpm dev`
+
+### CI (GitHub Actions)
+- Triggers on push/PR to `main`/`master`
+- Runs: `pnpm install --frozen-lockfile` → lint → typecheck → test
+- Uses pnpm v10, Node 22
+
 ## Frontend Architecture
 
 ### Routing

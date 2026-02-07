@@ -1,6 +1,24 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 — Polish + Deploy (Chunk 6)
+
+### Added
+- **Vercel deployment** — frontend as static site, API as serverless functions (no Express overhead)
+  - `api/cards/resolve.ts` — standalone serverless function replicating Express route logic
+  - `api/health.ts` — health check endpoint
+  - `vercel.json` — Turborepo build, SPA fallback rewrites
+- **GitHub Actions CI** — lint, typecheck, test on push/PR to `main`/`master`
+- **Loading spinner** — animated SVG spinner replaces "Resolving..." text during deck resolution
+- **Footer** — minimal version footer (`MTG Companion v0.1`)
+- **Page subtitle** — instructional text on mulligan page
+
+### Changed
+- **API URL fallback** — changed from `http://localhost:3001` to `''` (same-origin) for production Vercel deploys
+- **Textarea locked** — disabled after deck resolves (prevents editing stale state)
+- **Clear button** — shown after deck resolves (not just when input exists)
+- **Mobile responsiveness** — card grids use 3-col on mobile (was 4-col), stats panel stacks on mobile, nav spacing tightens
+
+## 0.3.0 — Decision Logging + Stats (Chunk 5)
 
 ### Added
 - **Decision logging** — every keep/mulligan decision persisted to localStorage, survives page refresh

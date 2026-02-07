@@ -15,7 +15,7 @@ See `docs/PRD.md` for full product requirements.
 - **Backend**: Node.js with Express (or Hono), TypeScript
 - **Database**: PostgreSQL via Neon (serverless) — even for MVP, to avoid SQLite→Postgres migration later
 - **Auth**: TBD (P1) — likely Clerk or Auth.js; design API to support auth from the start
-- **Deployment**: Vercel (frontend), Railway or Neon (backend/db)
+- **Deployment**: Vercel (static frontend + serverless API functions)
 - **Monorepo**: Turborepo with shared packages
 
 ## Abstractions Policy
@@ -54,12 +54,19 @@ mtg-companion/
 │   ├── shared-types/         # Shared TypeScript types (Card, Deck, MulliganDecision)
 │   ├── deck-parser/          # Decklist parsing logic (shared between frontend/backend)
 │   └── scryfall-client/      # Scryfall API client with caching
+├── api/                      # Vercel serverless functions (production API)
+│   ├── cards/
+│   │   └── resolve.ts        # POST /api/cards/resolve (standalone, no Express)
+│   ├── health.ts             # GET /api/health
+│   └── tsconfig.json
 ├── docs/
 │   ├── PRD.md                # Product requirements
 │   ├── ARCHITECTURE.md       # Technical architecture decisions
 │   └── HAND_READING_SPEC.md  # Hand reading tool v2 spec
+├── .github/workflows/ci.yml  # GitHub Actions CI (lint, typecheck, test)
 ├── CLAUDE.md                 # This file
 ├── eslint.config.js          # ESLint flat config (typescript-eslint + react-hooks)
+├── vercel.json               # Vercel deployment config
 ├── turbo.json
 ├── package.json
 └── tsconfig.base.json
@@ -223,7 +230,7 @@ VITE_API_URL=http://localhost:3001
 7. ~~Build mulligan simulator page (display hand, keep/mull flow, bottom cards)~~ ✅
 8. ~~Build post-keep draw simulation~~ ✅
 9. ~~Build local decision logging + basic stats display~~ ✅ 19 tests
-10. Deploy ← **next**
+10. ~~Deploy (Vercel serverless + CI)~~ ✅
 
 ### What's NOT in Phase 1
 - User accounts / auth
