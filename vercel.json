@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm turbo build",
+  "buildCommand": "pnpm turbo build --filter=@mtg-companion/web",
   "outputDirectory": "apps/web/dist",
   "installCommand": "pnpm install",
   "rewrites": [
