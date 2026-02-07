@@ -2,9 +2,10 @@
 set -e
 
 # Bundle serverless functions (inlines workspace dependencies)
-npx esbuild api/cards/resolve.ts --bundle --platform=node --target=node18 --format=esm --outfile=api/cards/resolve.js
+# Use pnpm exec to resolve esbuild from node_modules
+pnpm exec esbuild api/cards/resolve.ts --bundle --platform=node --target=node18 --format=esm --outfile=api/cards/resolve.js
 rm api/cards/resolve.ts
-npx esbuild api/health.ts --bundle --platform=node --target=node18 --format=esm --outfile=api/health.js
+pnpm exec esbuild api/health.ts --bundle --platform=node --target=node18 --format=esm --outfile=api/health.js
 rm api/health.ts
 
 # Build frontend
