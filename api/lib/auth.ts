@@ -1,10 +1,6 @@
 import type { VercelRequest } from '@vercel/node';
-import { createClerkClient } from '@clerk/backend';
+import { verifyToken } from '@clerk/backend';
 import { upsertUser } from './db';
-
-const clerk = createClerkClient({
-  secretKey: process.env.CLERK_SECRET_KEY,
-});
 
 interface AuthResult {
   userId: string;
@@ -23,7 +19,9 @@ export async function verifyAuth(req: VercelRequest): Promise<AuthResult | null>
   if (!token) return null;
 
   try {
-    const payload = await clerk.verifyToken(token);
+    const payload = await verifyToken(token, {
+      secretKey: process.env.CLERK_SECRET_KEY,
+    });
     const userId = payload.sub;
     if (!userId) return null;
 
