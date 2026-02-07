@@ -21,6 +21,8 @@ function isIgnoredLine(line: string): boolean {
   if (trimmed.startsWith('//') || trimmed.startsWith('#')) return true;
   const lower = trimmed.toLowerCase();
   if (lower === 'deck' || lower === 'companion' || lower === 'commander') return true;
+  // Skip MTGGoldfish Arena export metadata lines ("About", "Name <deck name>")
+  if (lower === 'about' || lower.startsWith('name ')) return true;
   return false;
 }
 

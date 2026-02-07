@@ -115,6 +115,25 @@ Sideboard
       expect(result.sideboard).toEqual([{ name: 'Pyroblast', quantity: 2 }]);
     });
 
+    it('skips MTGGoldfish Arena export metadata lines', () => {
+      const input = `About
+Name Simic Ouroboroid
+
+Deck
+4 Lightning Bolt
+3 Mountain
+
+Sideboard
+2 Pyroblast`;
+      const result = parseDecklist(input);
+      expect(result.mainboard).toEqual([
+        { name: 'Lightning Bolt', quantity: 4 },
+        { name: 'Mountain', quantity: 3 },
+      ]);
+      expect(result.sideboard).toEqual([{ name: 'Pyroblast', quantity: 2 }]);
+      expect(result.errors).toEqual([]);
+    });
+
     it('skips "Companion" and "Commander" headers', () => {
       const input = `Companion
 4 Lightning Bolt
