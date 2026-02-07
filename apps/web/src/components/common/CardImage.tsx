@@ -41,7 +41,6 @@ export default function CardImage({ card, selected, onClick, className = '' }: C
         src={card.imageUri}
         alt={card.name}
         className={`w-full rounded-lg ${loaded ? 'block' : 'hidden'}`}
-        loading="lazy"
         onLoad={() => setLoaded(true)}
         onError={() => setError(true)}
       />

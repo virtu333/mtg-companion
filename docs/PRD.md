@@ -141,7 +141,14 @@ The cost of not solving this: players plateau on fundamentals that are difficult
 - Per-card mulligan correlation: "Hands containing Card X are mulliganed Y% of the time vs Z% baseline"
 - Simple table/list view, not fancy visualization
 
-**P1-5: User Accounts & Data Persistence**
+**P1-5: Post-Sideboard Mulligan Practice**
+- After loading a deck, allow the user to swap cards between mainboard and sideboard before starting a mulligan session
+- UI to move cards in/out (e.g., "-2 Card A, +2 Card B from sideboard")
+- Sideboarded configuration used for that session's shuffling/drawing
+- Decision logs tagged with "pre-board" or "post-board" context
+- Critical for competitive practice: most games in a match are post-sideboard
+
+**P1-6: User Accounts & Data Persistence**
 - Email/password and/or OAuth (Google) signup/login
 - Migrate localStorage data to server on account creation
 - Server-side storage of decklists and decision history

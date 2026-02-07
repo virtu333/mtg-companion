@@ -407,6 +407,20 @@ describe('ScryfallClient', () => {
     expect(fetchFn).toHaveBeenCalledTimes(3);
   });
 
+  it('uses input name as key for DFCs (front face lookup)', async () => {
+    const dfc = makeDFCCard();
+    fetchFn = mockFetchSuccess([dfc]);
+
+    const client = new ScryfallClient({ fetchFn });
+    const result = await client.resolveCards(['Bloodsoaked Insight']);
+
+    // Key should be the input name, not the full DFC name
+    expect(result.resolved.has('Bloodsoaked Insight')).toBe(true);
+    expect(result.resolved.get('Bloodsoaked Insight')?.name).toBe(
+      'Bloodsoaked Insight // Sanguine Morass',
+    );
+  });
+
   it('handles mix of cached and uncached cards', async () => {
     const bolt = makeScryfallCard({ id: 'bolt-1', name: 'Lightning Bolt' });
     const guide = makeScryfallCard({ id: 'guide-1', name: 'Goblin Guide' });

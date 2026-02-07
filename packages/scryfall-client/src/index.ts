@@ -156,14 +156,31 @@ export class ScryfallClient {
 
       const data: ScryfallCollectionResponse = await response.json();
 
-      // Map and cache resolved cards
+      // Build lookup from Scryfall names to input names (for DFCs, etc.)
+      const inputNameLookup = new Map<string, string>();
+      for (const name of batch) {
+        inputNameLookup.set(name.toLowerCase(), name);
+      }
+
+      // Map and cache resolved cards, using input names as keys
       for (const sc of data.data) {
         const card = mapScryfallCard(sc);
-        resolved.set(card.name, card);
+        // Match back to input name: try full name, then front face of DFC
+        const inputName = inputNameLookup.get(card.name.toLowerCase())
+          ?? (sc.card_faces ? inputNameLookup.get(sc.card_faces[0].name.toLowerCase()) : undefined)
+          ?? card.name;
+        resolved.set(inputName, card);
         this.cache.set(card.name.toLowerCase(), {
           card,
           expiresAt: now + this.cacheTtlMs,
         });
+        // Also cache by input name if it differs (e.g. front face of DFC)
+        if (inputName.toLowerCase() !== card.name.toLowerCase()) {
+          this.cache.set(inputName.toLowerCase(), {
+            card,
+            expiresAt: now + this.cacheTtlMs,
+          });
+        }
       }
 
       // Try fuzzy lookup for not-found cards (handles Arena name variants)
