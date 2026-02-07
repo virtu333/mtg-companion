@@ -98,3 +98,18 @@ export interface DeckMulliganStats {
 // ── Simulation State ───────────────────────────────────────────────
 
 export type SimulationPhase = 'idle' | 'deciding' | 'bottoming' | 'playing';
+
+// ── Saved Deck Types ─────────────────────────────────────────────
+
+/** A saved decklist stored in localStorage */
+export interface SavedDeck {
+  id: string;
+  name: string;
+  rawInput: string;
+  parseResult: ParseResult;
+  resolvedCards: ResolvedCard[];
+  aliases: Record<string, string>;
+  notFound: string[];
+  savedAt: string;
+  lastUsedAt: string;
+}

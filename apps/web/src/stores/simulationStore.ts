@@ -10,6 +10,7 @@ interface SimulationStore {
   bottomedCards: CardInstance[];
   drawnCards: DrawnCard[];
   turnNumber: number;
+  onPlay: boolean;
 
   // Actions
   startNewHand: (deckCards: ResolvedCard[]) => void;
@@ -17,6 +18,7 @@ interface SimulationStore {
   keep: () => void;
   bottomCards: (instanceIds: Set<number>) => void;
   drawCard: () => void;
+  setOnPlay: (v: boolean) => void;
   reset: () => void;
 }
 
@@ -44,6 +46,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   bottomedCards: [],
   drawnCards: [],
   turnNumber: 0,
+  onPlay: true,
 
   startNewHand: (deckCards) => {
     const instances = toInstances(deckCards);
@@ -74,29 +77,48 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   },
 
   keep: () => {
-    const { mulliganCount } = get();
+    const { mulliganCount, onPlay, library } = get();
     if (mulliganCount > 0) {
       // Need to bottom N cards
       set({ phase: 'bottoming' });
+    } else if (!onPlay && library.length > 0) {
+      // On the draw, no mulligans: auto-draw turn 1 card
+      const newLib = [...library];
+      const drawn = newLib.shift()!;
+      set({ phase: 'playing', turnNumber: 1, library: newLib, drawnCards: [{ turn: 1, card: drawn }] });
     } else {
-      // No cards to bottom, go straight to playing
+      // On the play or empty library: go straight to playing
       set({ phase: 'playing', turnNumber: 1 });
     }
   },
 
   bottomCards: (instanceIds) => {
-    const { hand, library } = get();
+    const { hand, library, onPlay } = get();
     const remainingHand = hand.filter((c) => !instanceIds.has(c.instanceId));
     const bottomed = hand.filter((c) => instanceIds.has(c.instanceId));
     // Put bottomed cards on bottom of library
     const newLibrary = [...library, ...bottomed];
-    set({
-      phase: 'playing',
-      hand: remainingHand,
-      library: newLibrary,
-      bottomedCards: bottomed,
-      turnNumber: 1,
-    });
+
+    if (!onPlay && newLibrary.length > 0) {
+      // On the draw: auto-draw turn 1 card after bottoming
+      const drawn = newLibrary.shift()!;
+      set({
+        phase: 'playing',
+        hand: remainingHand,
+        library: newLibrary,
+        bottomedCards: bottomed,
+        turnNumber: 1,
+        drawnCards: [{ turn: 1, card: drawn }],
+      });
+    } else {
+      set({
+        phase: 'playing',
+        hand: remainingHand,
+        library: newLibrary,
+        bottomedCards: bottomed,
+        turnNumber: 1,
+      });
+    }
   },
 
   drawCard: () => {
@@ -112,6 +134,10 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     });
   },
 
+  setOnPlay: (v) => {
+    set({ onPlay: v });
+  },
+
   reset: () => {
     set({
       phase: 'idle',
@@ -121,6 +147,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       bottomedCards: [],
       drawnCards: [],
       turnNumber: 0,
+      onPlay: true,
     });
   },
 }));

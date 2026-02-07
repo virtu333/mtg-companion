@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { parseDecklist } from '@mtg-companion/deck-parser';
-import type { ParseResult, ResolvedCard } from '@mtg-companion/shared-types';
+import type { ParseResult, ResolvedCard, SavedDeck } from '@mtg-companion/shared-types';
 import { resolveCards } from '../lib/api';
 import { computeDeckId } from '../lib/deckId';
 
@@ -22,6 +22,7 @@ interface DeckStore {
   setRawInput: (input: string) => void;
   parse: () => ParseResult;
   resolve: () => Promise<void>;
+  loadSavedDeck: (saved: SavedDeck) => void;
   clear: () => void;
 }
 
@@ -89,6 +90,21 @@ export const useDeckStore = create<DeckStore>((set, get) => ({
         });
       }
     }
+  },
+
+  loadSavedDeck: (saved) => {
+    currentAbortController?.abort();
+    currentAbortController = null;
+    set({
+      rawInput: saved.rawInput,
+      parseResult: saved.parseResult,
+      resolvedCards: saved.resolvedCards,
+      notFound: saved.notFound,
+      aliases: saved.aliases,
+      resolveStatus: 'done',
+      resolveError: null,
+      deckId: saved.id,
+    });
   },
 
   clear: () => {

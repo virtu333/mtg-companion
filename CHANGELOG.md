@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.6.0 — Play/Draw Toggle + Saved Decklists (Phase 2)
+
+### Added
+- **Play/draw toggle** — segmented control to switch between On the Play / On the Draw before drawing a hand. When on the draw, turn 1 card is auto-drawn after keeping. Badge shows current mode during simulation
+- **Saved decklists** — save resolved decks to localStorage, load them instantly without re-resolving from Scryfall. Supports rename, delete, and upsert (same deck hash updates existing entry)
+- **deckLibraryStore** — new Zustand store for saved deck management (localStorage key: `mtg-companion:saved-decks`)
+- **simulationStore tests** — 8 tests covering onPlay toggle, auto-draw, persistence across hands, reset
+- **deckLibraryStore tests** — 9 tests covering CRUD, persistence, corrupt data handling
+- **SavedDeck type** — added to shared-types package
+
+### Changed
+- **SimulationSection** — play/draw toggle in idle phase, colored badge in active phases, `onPlay` value flows into decision recording
+- **DeckInput** — saved decks list (sorted by last used), inline save form with name input, Load/Delete per deck
+- **deckStore** — new `loadSavedDeck` action hydrates store from saved data without Scryfall call
+
+## 0.5.0 — Bug Fixes + Format Support
+
+### Added
+- **MTGGoldfish Arena export format** — deck parser now handles MTGGoldfish's Arena export (`4 Card Name <XY>`, no collector number)
+- **Fuzzy card name fallback** — when Scryfall batch endpoint can't find a card (e.g. Arena name variants like "Detect Intrusion"), falls back to `/cards/named?fuzzy=` lookup. Resolved cards are aliased so the frontend can match them back to parsed names
+- **DFC front-face indexing** — `buildDeckArray` indexes double-faced cards by front face name (e.g. "Bloodsoaked Insight" for "Bloodsoaked Insight // Sanguine Morass") so DFCs always resolve without depending on server aliases
+
+### Fixed
+- **Card images not loading** — replaced `display:none`/`block` image toggle with `opacity-0`/`opacity-100` pattern. Images stay in layout so `onLoad` fires reliably; skeleton/error states are absolute overlays
+- **59 cards in mainboard (DFC name mismatch)** — scryfall-client now maps resolved cards back to input names (not Scryfall canonical names), and the frontend card map indexes by front face name as fallback
+- **StatsPanel infinite re-render loop** — replaced Zustand selector returning new object with `useMemo` on raw state
+- **Vercel esbuild overwrite** — added `--allow-overwrite` to esbuild so bundled serverless functions replace source `.ts` files in place
+
+### Changed
+- **CardImage component** — container now has fixed `aspect-[488/680]` ratio; image uses `object-cover` + opacity transitions for smooth fade-in
+- **Scryfall client** — caches cards by both canonical name and input name (handles DFC + Arena name lookups); 20 tests (was 18)
+- **Deck parser** — 24 tests (was 23)
+
 ## 0.4.0 — Polish + Deploy (Chunk 6)
 
 ### Added

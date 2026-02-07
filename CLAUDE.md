@@ -89,7 +89,7 @@ We know user accounts and server-side data are coming (P1). Starting with Neon s
 - Frontend doesn't need to handle rate limiting
 
 ### Shared Card Display Component
-`CardImage` component handles: normal cards (use `image_uris.normal`), DFCs (use `card_faces[0].image_uris.normal`), loading/error states, lazy loading. This component is reused across mulligan sim and hand reading tool.
+`CardImage` component handles: normal cards (use `image_uris.normal`), DFCs (use `card_faces[0].image_uris.normal`), loading/error states. Uses opacity-based fade-in (not display:none toggle) for reliable image loading. This component is reused across mulligan sim and hand reading tool.
 
 ### Local-First with Sync
 MVP stores decision logs in localStorage. When auth is added (P1), we migrate local data to server on first login. Design the data model so localStorage shape matches the DB row shape.
@@ -161,9 +161,10 @@ interface DeckMulliganStats {
 ### Resolution Strategy
 1. Parse decklist → extract unique card names
 2. POST to `/cards/collection` with `{ identifiers: [{ name: "Card Name" }] }` (up to 75 per request)
-3. Cache results server-side (24h TTL, cards don't change within a set)
-4. Return resolved cards to frontend
-5. Frontend caches in Zustand store for session duration
+3. Cards not found in batch → fuzzy fallback via `/cards/named?fuzzy=` (handles Arena name variants)
+4. Cache results server-side (24h TTL, cards don't change within a set)
+5. Return resolved cards + aliases (input name → canonical name mappings) to frontend
+6. Frontend caches in Zustand store for session duration
 
 ### DFC Handling
 - Check for `card_faces` array on response
@@ -171,6 +172,7 @@ interface DeckMulliganStats {
 - Store `card_faces[1].image_uris.normal` as `backImageUri`
 - Card name: use the full `name` field (e.g., "Bloodsoaked Insight // Sanguine Morass")
 - For parsing: match on front face name only
+- Name resolution: scryfall-client maps results back to input names (not Scryfall canonical); `buildDeckArray` also indexes by front face name as fallback
 
 ### Error Handling
 - Cards not found: flag in UI, allow simulation with remaining cards
@@ -224,8 +226,8 @@ VITE_API_URL=http://localhost:3001
 
 ### Implementation Progress
 1. ~~Set up monorepo structure (Turborepo, shared packages)~~ ✅
-2. ~~Build `deck-parser` package (parse common formats, extract card names)~~ ✅ 23 tests
-3. ~~Build `scryfall-client` package (batch resolution, caching, 429 retry)~~ ✅ 18 tests
+2. ~~Build `deck-parser` package (parse common formats, extract card names)~~ ✅ 24 tests
+3. ~~Build `scryfall-client` package (batch resolution, caching, 429 retry, fuzzy fallback)~~ ✅ 20 tests
 4. ~~Build API server with `/api/cards/resolve` endpoint~~ ✅ 8 tests
 5. ~~Build frontend app shell (nav, routing, layout)~~ ✅
 6. ~~Build decklist input page (paste, parse, resolve, show errors)~~ ✅

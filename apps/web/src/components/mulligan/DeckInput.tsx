@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useDeckStore } from '../../stores/deckStore';
+import { useDeckLibraryStore } from '../../stores/deckLibraryStore';
 
 const PLACEHOLDER = `Paste your decklist here...
 
@@ -17,17 +19,104 @@ export default function DeckInput() {
   const parseResult = useDeckStore((s) => s.parseResult);
   const resolvedCards = useDeckStore((s) => s.resolvedCards);
   const notFound = useDeckStore((s) => s.notFound);
+  const aliases = useDeckStore((s) => s.aliases);
   const resolveStatus = useDeckStore((s) => s.resolveStatus);
   const resolveError = useDeckStore((s) => s.resolveError);
+  const deckId = useDeckStore((s) => s.deckId);
   const resolve = useDeckStore((s) => s.resolve);
   const clear = useDeckStore((s) => s.clear);
+  const loadSavedDeck = useDeckStore((s) => s.loadSavedDeck);
+
+  const savedDecks = useDeckLibraryStore((s) => s.decks);
+  const saveDeck = useDeckLibraryStore((s) => s.saveDeck);
+  const deleteDeck = useDeckLibraryStore((s) => s.deleteDeck);
+  const updateLastUsed = useDeckLibraryStore((s) => s.updateLastUsed);
+
+  const [saveName, setSaveName] = useState('My Deck');
+  const [showSaveInput, setShowSaveInput] = useState(false);
 
   const hasInput = rawInput.trim().length > 0;
   const isLoading = resolveStatus === 'loading';
   const isDone = resolveStatus === 'done';
 
+  // Sort saved decks by lastUsedAt descending
+  const sortedDecks = [...savedDecks].sort(
+    (a, b) => new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime(),
+  );
+
+  const handleLoadSaved = (id: string) => {
+    const deck = savedDecks.find((d) => d.id === id);
+    if (!deck) return;
+    loadSavedDeck(deck);
+    updateLastUsed(id);
+    setSaveName(deck.name);
+  };
+
+  const handleSave = () => {
+    if (!deckId || !parseResult || !saveName.trim()) return;
+    saveDeck(saveName.trim(), {
+      id: deckId,
+      rawInput,
+      parseResult,
+      resolvedCards,
+      aliases,
+      notFound,
+    });
+    setShowSaveInput(false);
+  };
+
+  // Check if current deck is already saved (for pre-populating name)
+  const existingSaved = deckId ? savedDecks.find((d) => d.id === deckId) : null;
+
   return (
     <div className="space-y-4">
+      {/* Saved Decks List */}
+      {sortedDecks.length > 0 && !isDone && (
+        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-gray-300 mb-3">Saved Decks</h3>
+          <div className="space-y-2">
+            {sortedDecks.map((deck) => {
+              const mainboardCount = deck.parseResult.mainboard.reduce(
+                (s, e) => s + e.quantity,
+                0,
+              );
+              const savedDate = new Date(deck.savedAt).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+              });
+              return (
+                <div
+                  key={deck.id}
+                  className="flex items-center justify-between gap-3 py-1.5"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-sm text-gray-100 truncate">{deck.name}</span>
+                    <span className="text-xs text-gray-500 whitespace-nowrap">
+                      ({mainboardCount} cards) &middot; saved {savedDate}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors"
+                      onClick={() => handleLoadSaved(deck.id)}
+                    >
+                      Load
+                    </button>
+                    <button
+                      className="px-2 py-1 text-gray-500 hover:text-red-400 text-xs transition-colors"
+                      onClick={() => deleteDeck(deck.id)}
+                      title="Delete saved deck"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Textarea */}
       <textarea
         className="w-full h-64 bg-gray-800 border border-gray-600 rounded-lg p-4 text-sm font-mono text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-y"
@@ -40,7 +129,7 @@ export default function DeckInput() {
       />
 
       {/* Actions */}
-      <div className="flex gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <button
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
           onClick={resolve}
@@ -67,7 +156,50 @@ export default function DeckInput() {
             Clear
           </button>
         )}
+        {/* Save button (shown when deck is resolved) */}
+        {isDone && resolvedCards.length > 0 && !showSaveInput && (
+          <button
+            className="px-4 py-2 bg-green-700 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors"
+            onClick={() => {
+              if (existingSaved) setSaveName(existingSaved.name);
+              setShowSaveInput(true);
+            }}
+          >
+            {existingSaved ? 'Update Saved Deck' : 'Save Deck'}
+          </button>
+        )}
       </div>
+
+      {/* Save form (inline) */}
+      {showSaveInput && (
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            placeholder="Deck name"
+            value={saveName}
+            onChange={(e) => setSaveName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSave();
+              if (e.key === 'Escape') setShowSaveInput(false);
+            }}
+            autoFocus
+          />
+          <button
+            className="px-3 py-1.5 bg-green-700 hover:bg-green-600 disabled:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
+            onClick={handleSave}
+            disabled={!saveName.trim()}
+          >
+            Save
+          </button>
+          <button
+            className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-medium rounded-lg transition-colors"
+            onClick={() => setShowSaveInput(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Parse errors */}
       {parseResult && parseResult.errors.length > 0 && (

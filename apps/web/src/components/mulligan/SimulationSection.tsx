@@ -56,11 +56,13 @@ export default function SimulationSection({ resolvedCards, parseResult, deckId, 
   const mulliganCount = useSimulationStore((s) => s.mulliganCount);
   const drawnCards = useSimulationStore((s) => s.drawnCards);
   const turnNumber = useSimulationStore((s) => s.turnNumber);
+  const onPlay = useSimulationStore((s) => s.onPlay);
   const startNewHand = useSimulationStore((s) => s.startNewHand);
   const mulligan = useSimulationStore((s) => s.mulligan);
   const keep = useSimulationStore((s) => s.keep);
   const bottomCards = useSimulationStore((s) => s.bottomCards);
   const drawCard = useSimulationStore((s) => s.drawCard);
+  const setOnPlay = useSimulationStore((s) => s.setOnPlay);
   const recordDecision = useStatsStore((s) => s.recordDecision);
 
   const deckCards = useMemo(
@@ -76,10 +78,10 @@ export default function SimulationSection({ resolvedCards, parseResult, deckId, 
       handCards: hand.map((c) => c.card.scryfallId),
       decision: 'mulligan',
       mulliganNumber: mulliganCount,
-      onPlay: true,
+      onPlay,
     });
     mulligan();
-  }, [hand, mulliganCount, deckId, mulligan, recordDecision]);
+  }, [hand, mulliganCount, deckId, mulligan, recordDecision, onPlay]);
 
   const handleKeep = useCallback(() => {
     if (mulliganCount === 0) {
@@ -88,12 +90,12 @@ export default function SimulationSection({ resolvedCards, parseResult, deckId, 
         handCards: hand.map((c) => c.card.scryfallId),
         decision: 'keep',
         mulliganNumber: 0,
-        onPlay: true,
+        onPlay,
       });
     }
     // If mulliganCount > 0, recording is deferred to handleBottomCards
     keep();
-  }, [hand, mulliganCount, deckId, keep, recordDecision]);
+  }, [hand, mulliganCount, deckId, keep, recordDecision, onPlay]);
 
   const handleBottomCards = useCallback(
     (instanceIds: Set<number>) => {
@@ -106,11 +108,11 @@ export default function SimulationSection({ resolvedCards, parseResult, deckId, 
         decision: 'keep',
         mulliganNumber: mulliganCount,
         bottomedCards: bottomedScryfallIds,
-        onPlay: true,
+        onPlay,
       });
       bottomCards(instanceIds);
     },
-    [hand, mulliganCount, deckId, bottomCards, recordDecision],
+    [hand, mulliganCount, deckId, bottomCards, recordDecision, onPlay],
   );
 
   const deckSize = deckCards.length;
@@ -122,12 +124,28 @@ export default function SimulationSection({ resolvedCards, parseResult, deckId, 
           <h2 className="text-lg font-semibold">Simulation</h2>
           <span className="text-sm text-gray-400">{deckSize} cards in mainboard</span>
         </div>
-        <button
-          className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-          onClick={handleStart}
-        >
-          Draw Opening Hand
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            onClick={handleStart}
+          >
+            Draw Opening Hand
+          </button>
+          <div className="inline-flex rounded-lg border border-gray-600 overflow-hidden text-sm">
+            <button
+              className={`px-3 py-1.5 transition-colors ${onPlay ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}
+              onClick={() => setOnPlay(true)}
+            >
+              On the Play
+            </button>
+            <button
+              className={`px-3 py-1.5 transition-colors ${!onPlay ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}
+              onClick={() => setOnPlay(false)}
+            >
+              On the Draw
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -135,7 +153,12 @@ export default function SimulationSection({ resolvedCards, parseResult, deckId, 
   return (
     <div className="border-t border-gray-700 pt-6 mt-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Simulation</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold">Simulation</h2>
+          <span className={`text-xs font-medium px-2 py-0.5 rounded ${onPlay ? 'bg-green-900/50 text-green-400' : 'bg-purple-900/50 text-purple-400'}`}>
+            {onPlay ? 'On the Play' : 'On the Draw'}
+          </span>
+        </div>
         <span className="text-sm text-gray-400">{deckSize} cards in mainboard</span>
       </div>
 
