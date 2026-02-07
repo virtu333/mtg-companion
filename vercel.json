@@ -2,6 +2,11 @@
   "buildCommand": "pnpm turbo build --filter=@mtg-companion/web",
   "outputDirectory": "apps/web/dist",
   "installCommand": "pnpm install",
+  "functions": {
+    "api/**/*.ts": {
+      "includeFiles": "packages/**/*"
+    }
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
